@@ -159,7 +159,6 @@ def whatsapp_webhook():
     print("MESEJ JSON DITERIMA:", body)
 
     try:
-        # Semak struktur mesej WhatsApp dengan lebih selamat
         entry = body.get("entry", [])
         if entry:
             changes = entry[0].get("changes", [])
@@ -173,7 +172,6 @@ def whatsapp_webhook():
 
                     print(f"BERJAYA BACA -> Dari: {from_number} | Mesej: {msg_body}")
 
-                    # Hantar ke Gemini & balas ke WhatsApp
                     balasan_ai = tanya_gemini(msg_body)
                     print(f"Balasan AI: {balasan_ai}")
 
