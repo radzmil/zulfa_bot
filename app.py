@@ -127,12 +127,13 @@ def tanya_gemini(text):
     if not GEMINI_API_KEY:
         return None
     try:
+        # Ditukar menggunakan model gemini-3.5-flash-lite yang stabil untuk HTTP API
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         headers = {"Content-Type": "application/json"}
         prompt = f"""
         Awak adalah Zulfa, staf khidmat pelanggan rasmi untuk syarikat SBL TRANSPORT (Shahril Basri Leisure Enterprise).
         Gaya bahasa awk: Mesra, ramah, guna bahasa Melayu santai/pasar (awk, kitorang, tau, etc.), sopan, dan prihatin macam manusia betul.
-        Syarikat kita khusus menyediakan sewaan BAS 44 SEAT sahaja buat masa ni. (Van/MPV belum buka online).
+        Syarikat kita khusus menyediakan sewaan BAS 44 SEAT sahaja buat masa ni.
         Kalau pelanggan tanya pasal sewa bas atau harga, jemput mereka isi borang sewaan bas 44 seat.
         Link WhatsApp Sales rasmi kita ialah: {SALES_LINK}
         
@@ -242,7 +243,8 @@ def webhook():
             hantar(target, "Alhamdulillah! Pembayaran anda telah disahkan. Tempahan sah! 🎉")
         else:
             hantar(user, proses_mesej(user, body))
-    except:
+    except Exception as e:
+        print(f"Webhook Error: {e}")
         pass
     return jsonify({"status": "success"}), 200
 
