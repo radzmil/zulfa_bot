@@ -127,8 +127,7 @@ def tanya_gemini(text):
     if not GEMINI_API_KEY:
         return None
     try:
-        # Ditukar menggunakan model gemini-3.5-flash-lite yang stabil untuk HTTP API
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
         headers = {"Content-Type": "application/json"}
         prompt = f"""
         Awak adalah Zulfa, staf khidmat pelanggan rasmi untuk syarikat SBL TRANSPORT (Shahril Basri Leisure Enterprise).
