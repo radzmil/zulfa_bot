@@ -71,7 +71,7 @@ LOGIK & FORMULA PENGIRAAN HARGA (BAS 44 SEAT):
 2. Lebihan Jarak (>51km): Tambah RM 3 / km (Flat Rate) kepada harga asas zon.
 3. Formula Two Way / Return:
    - Return Hari Sama: Harga One Way + 50% (Harga One Way × 1.5)
-   - Return Hari Lain / Esoknya: Harga One Way + 100% (Harga OneWay × 2.0)
+   - Return Hari Lain / Esoknya: Harga One Way + 100% (Harga One Way × 2.0)
 4. DILARANG sama sekali mendedahkan pecahan formula, zon, atau pengiraan kepada pelanggan; hanya paparkan jumlah harga akhir sahaja.
 
 ALIRAN & VALIDASI BORANG (SATU PERSATU):
@@ -156,32 +156,31 @@ def verify_webhook():
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     body = request.get_json()
-    print("Mesej diterima:", body)
+    print("MESEJ JSON DITERIMA:", body)
 
     try:
-        if body.get("object"):
-            if (
-                body.get("entry")
-                and body["entry"][0].get("changes")
-                and body["entry"][0]["changes"][0].get("value")
-                and body["entry"][0]["changes"][0]["value"].get("messages")
-            ):
-                value = body["entry"][0]["changes"][0]["value"]
-                from_number = value["messages"][0]["from"]
-                msg_body = value["messages"][0]["text"]["body"]
+        # Semak struktur mesej WhatsApp dengan lebih selamat
+        entry = body.get("entry", [])
+        if entry:
+            changes = entry[0].get("changes", [])
+            if changes:
+                value = changes[0].get("value", {})
+                messages = value.get("messages", [])
+                
+                if messages:
+                    from_number = messages[0]["from"]
+                    msg_body = messages[0]["text"]["body"]
 
-                print(f"Dari: {from_number} | Mesej: {msg_body}")
+                    print(f"BERJAYA BACA -> Dari: {from_number} | Mesej: {msg_body}")
 
-                balasan_ai = tanya_gemini(msg_body)
-                print(f"Balasan AI: {balasan_ai}")
+                    # Hantar ke Gemini & balas ke WhatsApp
+                    balasan_ai = tanya_gemini(msg_body)
+                    print(f"Balasan AI: {balasan_ai}")
 
-                hantar_whatsapp(from_number, balasan_ai)
+                    hantar_whatsapp(from_number, balasan_ai)
 
-                return jsonify({"status": "success"}), 200
-            
-            return jsonify({"status": "ignored"}), 200
-        else:
-            return "Not a WhatsApp API event", 404
+        return jsonify({"status": "success"}), 200
+        
     except Exception as e:
         print(f"Ralat Webhook: {e}")
         return jsonify({"status": "error"}), 500
