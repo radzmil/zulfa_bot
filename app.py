@@ -1,5 +1,5 @@
 # ==========================================
-# ZULFA_BOT.PY - ZULFA (SBL TRANSPORT - GEMINI)
+# APP.PY - ZULFA (SBL TRANSPORT - GEMINI)
 # ==========================================
 
 import os
@@ -71,7 +71,7 @@ LOGIK & FORMULA PENGIRAAN HARGA (BAS 44 SEAT):
 2. Lebihan Jarak (>51km): Tambah RM 3 / km (Flat Rate) kepada harga asas zon.
 3. Formula Two Way / Return:
    - Return Hari Sama: Harga One Way + 50% (Harga One Way × 1.5)
-   - Return Hari Lain / Esoknya: Harga One Way + 100% (Harga One Way × 2.0)
+   - Return Hari Lain / Esoknya: Harga One Way + 100% (Harga OneWay × 2.0)
 4. DILARANG sama sekali mendedahkan pecahan formula, zon, atau pengiraan kepada pelanggan; hanya paparkan jumlah harga akhir sahaja.
 
 ALIRAN & VALIDASI BORANG (SATU PERSATU):
@@ -132,6 +132,11 @@ def hantar_whatsapp(nombor_penerima, mesej_balasan):
     response = requests.post(url, json=payload, headers=headers)
     print("HASIL RESPON META:", response.text)
     return response.json()
+
+# Route utama untuk mengelakkan ralat Not Found di pelayar web
+@app.route("/", methods=["GET"])
+def home():
+    return "Zulfa Bot Server is running active!", 200
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
