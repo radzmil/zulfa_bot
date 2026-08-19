@@ -217,7 +217,7 @@ def proses_mesej(user, text):
             Jawab mesej pelanggan ini dengan bijak, natural, dan ringkas sebagai Zulfa:
             """
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash",
                 contents=prompt
             )
             if response and response.text:
