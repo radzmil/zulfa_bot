@@ -4,9 +4,15 @@ import requests
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
-from google import genai
 
 load_dotenv()
+
+# Cuba import library genai, jika tak ada, set jadi None supaya tak crash
+try:
+    from google import genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
 
 app = Flask(__name__)
 
@@ -20,11 +26,16 @@ SALES_LINK = "https://wa.link/o3z1bz"
 COMPANY = "SHAHRIL BASRI LEISURE ENTERPRISE"
 DATA_FILE = "data_pelanggan.csv"
 
-# Inisialisasi Klien Gemini (Pastikan GEMINI_API_KEY ada dalam environment variable Railway)
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
+# Inisialisasi Klien Gemini jika library ada
+client = None
+if GEMINI_AVAILABLE:
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if gemini_api_key:
+        try:
+            client = genai.Client(api_key=gemini_api_key)
+        except:
+            pass
 
-# Senarai Mukim Pickup Dibenarkan (Selangor & KL)
 ALLOWED_PICKUP = [
     "bukit raja", "damansara", "petaling", "sungai buloh",
     "ampang", "beranang", "cheras", "hulu langat", "kajang", "semenyih",
@@ -39,7 +50,6 @@ ALLOWED_PICKUP = [
     "klia", "cyberjaya", "putrajaya"
 ]
 
-# Senarai Cuti Umum (Format DD/MM/YYYY)
 CUTI_UMUM = [
     "31/08/2026", # Hari Kebangsaan
     "16/09/2026", # Hari Malaysia
@@ -131,7 +141,6 @@ def kira_harga(destinasi, teks_penuh, jarak_km=70):
 def proses_mesej(user, text):
     msg = text.lower()
 
-    # 1. Jika pelanggan hantar borang lengkap
     if "lokasi ambil:" in msg or "lokasi hantar:" in msg:
         tarikh_raw = ""
         try:
@@ -193,7 +202,7 @@ def proses_mesej(user, text):
             hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN (BAS)*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
         return "Baik awk! Terima kasih. Saya sedang semak dengan admin. Tunggu sebentar ya! 🙏"
 
-    # 2. Jika soalan biasa / santai, gunakan kuasa Gemini 3.5/2.5 Flash Lite!
+    # Jika client ada (Gemini berfungsi)
     if client:
         try:
             prompt = f"""
@@ -208,7 +217,7 @@ def proses_mesej(user, text):
             Jawab mesej pelanggan ini dengan bijak, natural, dan ringkas sebagai Zulfa:
             """
             response = client.models.generate_content(
-                model="gemini-2.5-flash", # atau gemini-3.5-flash-lite mengikut model sokongan
+                model="gemini-2.5-flash",
                 contents=prompt
             )
             if response and response.text:
@@ -216,8 +225,8 @@ def proses_mesej(user, text):
         except Exception as e:
             print(f"Gemini AI Error: {e}")
 
-    # Fallback biasa jika API gagal
-    return "Orite awk, ada apa-apa lagi yang Zulfa boleh bantu untuk sewaan bas kita? 😊"
+    # Fallback mesra jika Gemini belum aktif atau gagal
+    return "Hai awk! 😊 Sila isi borang sewaan bas 44 seat untuk semak harga laluan kita, atau ada apa-apa lagi yang Zulfa boleh bantu?"
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
