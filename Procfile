@@ -1,1 +1,1 @@
-web: gunicorn zulfa_bot:app
+web: gunicorn app:app
