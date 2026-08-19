@@ -1,6 +1,7 @@
 import os
 import csv
 import requests
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
@@ -33,6 +34,13 @@ ALLOWED_PICKUP = [
     "klia", "cyberjaya", "putrajaya"
 ]
 
+# Senarai Cuti Umum (Format DD/MM/YYYY)
+CUTI_UMUM = [
+    "31/08/2026", # Hari Kebangsaan
+    "16/09/2026", # Hari Malaysia
+    "25/12/2026", # Hari Krismas
+]
+
 # Function to send messages via WhatsApp API
 def hantar(to, msg, type="text", image_url=None):
     url = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"
@@ -61,46 +69,66 @@ def simpan_data(no_tel, detail):
     except Exception as e:
         print(f"Error saving data: {e}")
 
-# Fungsi Pengiraan Harga Automatik Bas 44 Seat
-def kira_harga(destinasi, jenis_trip, jarak_km=50):
-    dest = destinasi.lower()
-    base_price = 700  # Default Zon 1A
+# Fungsi Semak Tarikh (Mesti 8 hari ke atas & Bukan Hari Cuti Umum)
+def validasi_tarikh(tarikh_str):
+    try:
+        t = datetime.strptime(tarikh_str.strip(), "%d/%m/%Y")
+        hari_ini = datetime.now().date()
+        min_tarikh = hari_ini + timedelta(days=8)
+        
+        tarikh_semak_str = t.strftime("%d/%m/%Y")
 
-    # Tentukan Zon Harga Asas 50km Pertama
+        if t.date() < hari_ini:
+            return False, "Tarikh tempahan telah lepas (lampau)."
+        elif t.date() < min_tarikh:
+            return False, "Tempahan kurang dari 8 hari (Urgent booking)."
+        elif tarikh_semak_str in CUTI_UMUM:
+            return False, "Tarikh tersebut adalah Hari Cuti Umum."
+        
+        return True, t
+    except:
+        return False, "Format tarikh salah. Sila guna format DD/MM/YYYY (Contoh: 30/08/2026)."
+
+# Fungsi Pengiraan Harga Automatik (Base Zon + Extra KM)
+def kira_harga(destinasi, teks_penuh, jarak_km=70):
+    dest = destinasi.lower()
+    
+    # 1. Tentukan Harga Asas Zon (Asas 50km pertama)
     if any(x in dest for x in ["genting", "bukit tinggi"]):
         base_price = 1000
     elif "bentong" in dest:
         base_price = 1200
-    elif any(x in dest for x in ["ipoh", "seremban", "melaka", "port dickson"]):
+    elif any(x in dest for x in ["ipoh", "seremban", "melaka", "port dickson", "temerloh"]):
         base_price = 1300
     elif any(x in dest for x in ["cameron", "kuantan"]):
         base_price = 1500
-    elif any(x in dest for x in ["terengganu", "kelantan", "johor", "jb", "kedah", "perlis", "penang", "pulau pinang"]):
+    elif any(x in dest for x in ["terengganu", "kelantan", "johor", "jb", "kedah", "perlis", "penang"]):
         base_price = 1700
     elif any(x in dest for x in ["kajang", "semenyih", "klia", "hulu selangor"]):
         base_price = 850
     else:
-        base_price = 700 # Zon 1A (KL & Selangor berdekatan)
+        base_price = 700
 
-    # Tambahan jika lebih 50km (RM3/km)
+    # 2. Kira Kos Tambahan KM (Jika melebihi 50km, caj RM3/km)
     extra_km_price = 0
     if jarak_km > 50:
         extra_km_price = (jarak_km - 50) * 3
 
     one_way_total = base_price + extra_km_price
 
-    # Formula Two Way (Pergi Balik)
-    if "two way" in jenis_trip or "pergi balik" in jenis_trip:
-        if "hari lain" in jenis_trip or "esok" in jenis_trip:
-            final_price = one_way_total * 2.0  # Hari lain (+100%)
-        else:
-            final_price = one_way_total * 1.5  # Hari sama (+50%)
+    # 3. Semak Trip Sehala atau Pergi Balik
+    is_two_way = False
+    if "return" in teks_penuh.lower() or "pergi balik" in teks_penuh.lower():
+        is_two_way = True
+
+    if is_two_way:
+        final_price = one_way_total * 1.5
         trip_label = "Two Way (Pergi Balik)"
     else:
         final_price = one_way_total
         trip_label = "One Way (Sehala)"
 
-    return trip_label, jarak_km, int(final_price)
+    return trip_label, int(final_price)
 
 # Main Logic / Zulfa's Persona & Flow
 def proses_mesej(user, text):
@@ -110,76 +138,104 @@ def proses_mesej(user, text):
     if any(x in msg for x in ["hi", "hello", "sewa", "tanya"]):
         return "Hai, assalammualaikum! 😊\nSy Zulfa dr team SBL TRANSPORT. Tq sbb pm kitorang tau.\n\nBole Zulfa tau, awk nk sewa bas (44 seat), van, atau MPV ya?"
     
-    # Filtering Van & MPV
     if any(x in msg for x in ["mpv", "suv", "van"]):
         return f"Untuk sewaan van & MPV, kitorang belum buka tempahan online lagi bos 🙏\n\nTapi kalau awk berminat, awk boleh terus berhubung dengan team Sales kitorang untuk bincang lanjut kat sini ya 👇\n\n📲 {SALES_LINK}"
     
-    # Tour / Rombongan
     if "tour" in msg or "rombongan" in msg or "jalan" in msg:
         return f"Wah seronoknya nk pegi jalan2! 🚌✨\n\nUtk pakej tour / rombongan pulak, harga ikut itinerary & berapa hari trip awk. Utk dpt harga paling ngam, kawan sy dr bahagian Sales bole tolong kirakan terus tau.\n\nAwk bole klik link ni utk terus sembang dgn team Sales kitorang ya:\n📲 {SALES_LINK}"
 
-    # 2. Bus Booking Process Started
-    if "bas" in msg or "44" in msg:
-        return "Orite! Utk bas 44 seat ni, awk nk sewa utk trip sehala (one way), pergi balik (two way), atau nk buat trip jalan2 / rombongan (tour)?"
+    # 2. Berikan Borang Kosong Jika Tanya Harga / Bas
+    if "harga" in msg or "ke " in msg or "dr " in msg or "dari " in msg or "bas" in msg or "44" in msg:
+        return (
+            f"Orite! Utk bas 44 seat ni, tolong isi & lengkapkan borang maklumat bawah ni dulu ya supaya Zulfa bole semak laluan & kirakan harga tepat utk awk 👇\n\n"
+            f"📝 *BORANG MAKLUMAT SEWAAN*\n"
+            f"Syarikat: \n"
+            f"Alamat: \n"
+            f"Nama: \n"
+            f"No. tel: \n"
+            f"Tarikh: \n"
+            f"Masa: \n"
+            f"Lokasi Ambil: \n"
+            f"Lokasi Hantar: \n"
+            f"Jumlah Penumpang: \n\n"
+            f"🔄 *Maklumat RETURN trip* (Wajib isi jika Two Way / Kosongkan jika One Way):\n"
+            f"Tarikh: \n"
+            f"Masa: \n"
+            f"Pick-up: \n"
+            f"Drop-off: \n"
+            f"Pax: \n\n"
+            f"*(Salin borang di atas, isi butiran anda, dan hantar semula di sini)* 😊"
+        )
 
-    # Trip Type Selection Responses
-    if "one way" in msg or "sehala" in msg:
-        return "Okey set! Agak2 jam berapa ya perancangan nk bertolak / pickup nanti? 😊"
-    
-    if "two way" in msg or "pergi balik" in msg:
-        return "Okey set! Utk trip pergi balik (two way) tu, awk nk balik pada hari yg sama atau hari lain / esoknya? 😊"
+    # 3. Semakan Borang, Tarikh, Kawasan & Pengiraan Harga Automatik
+    if "lokasi ambil:" in msg or "lokasi hantar:" in msg:
+        # A. Semak Tarikh
+        tarikh_raw = ""
+        try:
+            for line in text.split("\n"):
+                if "tarikh:" in line.lower():
+                    val = line.split(":", 1)[1].strip()
+                    if val:
+                        tarikh_raw = val
+                        break
+        except:
+            pass
 
-    # Gatekeeping & Validation for Submission / Harga Calculation
-    if "submit booking" in msg or "tarikh:" in msg:
-        # Semak kawasan pickup
+        is_valid_date, date_msg = validasi_tarikh(tarikh_raw)
+        if not is_valid_date:
+            return (
+                f"Alamak, maaf sangat tau awk! 🙏 ({date_msg})\n\n"
+                f"Untuk tempahan urgent, tarikh cuti umum, atau tempahan kurang dari 8 hari, sistem online tak sokong.\n\n"
+                f"Tapi jangan risau, awk boleh terus berhubung dengan team Sales kitorang untuk semak kekosongan bas kat sini ya 👇\n\n"
+                f"📲 {SALES_LINK}"
+            )
+
+        # B. Semak Kawasan Pickup Dibenarkan
         lokasi_sah = any(lokasi in msg for lokasi in ALLOWED_PICKUP)
-        if not lokasi_sah and "lokasi ambil:" in msg:
+        if not lokasi_sah:
             return f"Alamak, sorry tau awk 🙏 Untuk lokasi pickup kat luar kawasan Selangor, KL & KLIA, sistem kitorang tak sokong.\n\nTapi jangan risau, awk boleh terus berhubung dengan team Sales kitorang untuk bincang lanjut kat sini ya 👇\n\n📲 {SALES_LINK}"
 
-        # Simulasi ekstrak destinasi (Lokasi Hantar) dan Jenis Trip dari mesej borang pelanggan
-        destinasi_hantar = "Kuala Lumpur" # Default fallback
-        if "lokasi hantar:" in msg:
-            parts = msg.split("lokasi hantar:")
-            if len(parts) > 1:
-                destinasi_hantar = parts[1].split("\n")[0].strip()
+        # C. Ekstrak Lokasi Hantar & Kira Harga
+        destinasi_hantar = "Kuala Lumpur"
+        try:
+            for line in text.split("\n"):
+                if "lokasi hantar:" in line.lower():
+                    val = line.split(":", 1)[1].strip()
+                    if val:
+                        destinasi_hantar = val
+        except:
+            pass
 
-        jenis_trip_dipilih = "One Way"
-        if "two way" in msg or "pergi balik" in msg:
-            jenis_trip_dipilih = "Two Way"
+        label_trip, harga_akhir = kira_harga(destinasi_hantar, text)
 
-        # Kira harga automatik
-        label_trip, km, harga_akhir = kira_harga(destinasi_hantar, jenis_trip_dipilih, 50)
-
-        # Simpan data pelanggan & hantar notifikasi ke Admin
+        # D. Simpan Data & Hantar Notifikasi ke Admin
         simpan_data(user, text + f" | Harga: RM{harga_akhir}")
         if ADMIN:
-            hantar(ADMIN, f"📋 *TEMPAHAN BAS 44 SEAT*\n📱 Rujukan: {user}\n💰 Anggaran Harga: RM{harga_akhir}\n\n{text}")
+            hantar(ADMIN, f"📋 *TEMPAHAN BAS 44 SEAT*\n📱 Rujukan: {user}\n💰 Harga Sistem: RM{harga_akhir}\n\n{text}")
         
-        # Hantar QR Code jika ada
         if QR_IMAGE_URL:
             hantar(user, f"DuitNow QR - {COMPANY}\n(Rujukan: {user})", type="image", image_url=QR_IMAGE_URL)
             
-        # Paparan Sebut Harga Akhir & Pilihan Pembayaran
+        # E. Respon Sebut Harga & Kaedah Pembayaran
         return (
-            f"Tq bagi maklumat lengkap! Ni anggaran harga utk trip awk ya 😊\n\n"
-            f"📊 *ANGGARAN HARGA ({label_trip})*\n"
+            f"Zulfa dah semak borang awk! Tarikh sah & laluan dibenarkan. Ni anggaran harga trip awk ya 😊\n\n"
+            f"📊 *SEMAKAN SEBUT HARGA*\n"
             f"🗺️ *Destinasi:* {destinasi_hantar}\n"
+            f"🛣️ *Jenis Trip:* {label_trip}\n"
             f"💵 *JUMLAH HARGA:* RM {harga_akhir}\n\n"
             f"Sila pilih kaedah pembayaran anda:\n\n"
-            f"1️⃣ *Online Banking (ToyyibPay):*\n"
-            f"👉 Klik link ni untuk bayar terus: {TOYYIBPAY_LINK}\n\n"
-            f"2️⃣ *Scan DuitNow QR (CIMB):*\n"
-            f"👉 Imbas gambar QR di atas dan letak nombor telefon anda (*{user}*) sebagai rujukan.\n\n"
-            f"Dah siap bayar, sila balas *'dah bayar'* dan hantar resit di sini ya! 😊"
+            f"1️⃣ *Online Banking (ToyyibPay):*\n👉 {TOYYIBPAY_LINK}\n\n"
+            f"2️⃣ *Scan DuitNow QR (CIMB)* di atas & letak no fon (*{user}*) sebagai rujukan.\n\n"
+            f"Dah siap bayar, sila balas *'dah bayar'* kat sini ya! 🙏"
         )
 
-    # 3. Payment Confirmation
+    # 4. Pengesahan Bayaran Manual
     if "dah bayar" in msg:
         if ADMIN:
-            hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN MANUAL (BAS)*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
+            hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN (BAS)*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
         return "Baik awk! Terima kasih. Saya sedang semak dengan admin. Tunggu sebentar ya! 🙏"
 
-    return "Sekejap ya awk, sy tengah semak jadual kejap."
+    return "Orite awk, ada apa-apa lagi yang Zulfa boleh bantu untuk sewaan bas kita? 😊"
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
@@ -191,7 +247,7 @@ def webhook():
         msg = data["entry"][0]["changes"][0]["value"]["messages"][0]
         user, body = msg["from"], msg["text"]["body"]
         
-        # Admin confirmation
+        # Admin confirmation shortcut
         if ADMIN and user == ADMIN and body.lower().startswith("done"):
             target = body.split()[1]
             hantar(target, "Alhamdulillah! Pembayaran anda telah disahkan. Tempahan sah! 🎉")
