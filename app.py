@@ -19,6 +19,7 @@ SALES_LINK = "https://wa.link/o3z1bz"
 COMPANY = "SHAHRIL BASRI LEISURE ENTERPRISE"
 DATA_FILE = "data_pelanggan.csv"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+VERIFY_TOKEN_VAL = os.getenv("VERIFY_TOKEN", "sbleisure_secure_token")
 
 ALLOWED_PICKUP = [
     "bukit raja", "damansara", "petaling", "sungai buloh",
@@ -211,25 +212,21 @@ def proses_mesej(user, text):
             hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN (BAS)*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
         return "Baik awk! Terima kasih. Saya sedang semak dengan admin. Tunggu sebentar ya! 🙏"
 
-    # Cuba jawab guna Gemini API secara langsung
     jawapan_ai = tanya_gemini(text)
     if jawapan_ai:
         return jawapan_ai
 
-    # Fallback mesra jika API tiada
     return "Hai awk! 😊 Sila isi borang sewaan bas 44 seat untuk semak harga laluan kita, atau ada apa-apa lagi yang Zulfa boleh bantu?"
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
-        # Semak token dengan Meta
-        TOKEN_VERIFIKASI = os.getenv("VERIFY_TOKEN", "sbleisure_secure_token")
         mode = request.args.get("hub.mode")
         token = request.args.get("hub.verify_token")
         challenge = request.args.get("hub.challenge")
         
         if mode and token:
-            if mode == "subscribe" and token == TOKEN_VERIFIKASI:
+            if mode == "subscribe" and token == VERIFY_TOKEN_VAL:
                 return challenge, 200
             else:
                 return "Verification failed", 403
