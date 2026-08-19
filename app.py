@@ -1,9 +1,10 @@
 # ==========================================
-# APP.PY - ZULFA (SBL TRANSPORT - GEMINI)
+# APP.PY - ZULFA (SBL TRANSPORT - GEMINI + TOYYIBPAY API DYNAMIC)
 # ==========================================
 
 import os
 import requests
+import hashlib
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
@@ -15,157 +16,148 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN")
+GROUP_ADMIN_NUMBER = os.getenv("GROUP_ADMIN_NUMBER")
 
-# Memori perbualan diasingkan mengikut nombor telefon user (Dictionary)
+# Maklumat ToyyibPay Bos (Secret Key & Category Code rasmi)
+TOYYIBPAY_SECRET_KEY = "ct48pm53-ijta-7aq5-h0bc-hy1w37c9s4h2"
+TOYYIBPAY_CATEGORY_CODE = "2iao5hzg" 
+TOYYIBPAY_API_URL = "https://toyyibpay.com/index.php/api/createBill"
+
 user_sessions = {}
 
 system_instruction = """
 ==================================================
-SYSTEM PROMPT & SKRIP CHATBOT SEWAAN KENDERAAN (WHATCHIMP)
-NAMA AI: ZULFA (STAFF SALES / KHIDMAT PELANGGAN SBL TRANSPORT)
-TAGLINE: DESTINASI ANDA, KEUTAMAAN KAMI!
+SYSTEM PROMPT & SKRIP CHATBOT (ZULFA - SBL TRANSPORT)
 ==================================================
-- Wajib jadi manusia biasa (Staf sales bernama Zulfa). JANGAN JADI ROBOT & JANGAN OVER-ACTING.
-- Gaya mesej WhatsApp: Ringkas, bersahaja, mesra, dan pendek (1-2 ayat sahaja setiap balasan). Guna shortform biasa (awk, sy, tq, dlm, blh).
-- PENTING: JANGAN KARANG CERITA PANJANG ATAU BERBUAT LAWAK BERLEBIHAN. Jawab soalan customer terus secara direct tapi mesra.
-- PERATURAN MUTLAK: DILARANG GUNAKAN NOMBOR UTK PILIHAN MENU.
-
---- [PERATURAN UTAMA: 1 SOALAN 1 JAWAPAN] ---
-- Fokus kepada **SATU perkara atau SATU soalan sahaja** pada setiap kali mesej dihantar.
-- Jangan tanya banyak benda dalam satu masa.
-
-MAKLUMAT ASAS SYARIKAT:
-- Nama: Shahril Basri Leisure Enterprise (SBL Transport), SSM: 202203168334 (003413019-W).
-- Alamat Pejabat: No. 8-1, 9-1, First Floor, Laman Niaga @ Ampang Waterfront, Jalan Awf 3A, Ampang Waterfront, 68000 Ampang, Selangor.
-- No WhatsApp Sales: 013-243 4200 | Link Sales: https://wa.link/o3z1bz
-
-PERATURAN PEMILIHAN KENDERAAN:
-- Bas (44 seat): Sahaja untuk tempahan online.
-- Van & MPV: Terus arahkan ke WhatsApp Sales: https://wa.link/o3z1bz.
-
-KAWASAN PICKUP SAH:
-- Selangor, KL, KLIA, Cyberjaya, Putrajaya.
-- Luar kawasan: Tolak peramah & beri link WhatsApp Sales: https://wa.link/o3z1bz.
-
-[URGENT BOOKING POLICY]
-- Tarikh Semasa: 18 Ogos 2026.
-- Tempahan online HANYA untuk 26 Ogos 2026 dan ke atas. 
-- Tarikh 19 - 25 Ogos 2026 adalah Urgent Booking, wajib beri link sales: https://wa.link/o3z1bz.
-
-FORMULA HARGA AKHIR (BAS 44 SEAT):
-- ZON 1A = RM700 | ZON 1B = RM850 | ZON 1C = RM1000 | ZON 1D = RM1200 | ZON 2A = RM1300 | ZON 2B = RM1500 | ZON 3 = RM1700.
-- Lebihan >51km: Tambah RM3/km. Return sama hari x1.5, lain hari x2.0.
-- Hanya berikan jumlah harga akhir sahaja. Jangan dedahkan formula.
+- PERANAN: Zulfa, staf sales mesra, ringkas, bersahaja (Guna: awk, sy, tq, blh).
+- TUGAS UTAMA: Bantu pelanggan sewa MPV/Van/Bas.
+- TARIKH SEMASA: 19 Ogos 2026.
+- FLOW TEMPAHAN:
+    1. Selepas pelanggan isi borang, Zulfa WAJIB tanya untuk PENGESAHAN: 
+       "Awk pasti dengan maklumat ni? Kalau setuju, taip 'Submit Booking' untuk kami proses."
+    2. Jika pelanggan taip 'Submit Booking':
+       a. Zulfa sahkan tempahan dan sediakan link pembayaran automatik.
 """
+
+def hantar_whatsapp(nombor_penerima, mesej_balasan):
+    url = f"https://graph.facebook.com/v20.0/{WHATSAPP_PHONE_ID}/messages"
+    headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+    payload = {"messaging_product": "whatsapp", "to": nombor_penerima, "type": "text", "text": {"body": mesej_balasan}}
+    requests.post(url, json=payload, headers=headers)
+
+def hantar_ke_admin(detail_booking):
+    if GROUP_ADMIN_NUMBER:
+        url = f"https://graph.facebook.com/v20.0/{WHATSAPP_PHONE_ID}/messages"
+        headers = {"Authorization": f"Bearer {WHATSAPP_TOKEN}", "Content-Type": "application/json"}
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": GROUP_ADMIN_NUMBER,
+            "type": "text",
+            "text": {"body": detail_booking},
+        }
+        requests.post(url, json=payload, headers=headers)
+
+def create_toyyibpay_bill(nama_pelanggan, telefon_pelanggan, detail_tempahan):
+    """Fungsi untuk memanggil API Create Bill ToyyibPay secara dinamik"""
+    try:
+        payload = {
+            'userSecretKey': TOYYIBPAY_SECRET_KEY,
+            'categoryCode': TOYYIBPAY_CATEGORY_CODE,
+            'billName': 'Tempahan SBL Transport',
+            'billDescription': detail_tempahan[:200],
+            'billPriceSetting': 1, # 1 = Fixed amount, 0 = Open amount
+            'billPayorInfo': 1,
+            'billAmount': 10000, # Contoh nilai dalam sen (RM100.00). Boleh ubah ikut harga sebenar.
+            'billReturnURL': 'https://wa.link/o3z1bz',
+            'billCallbackURL': 'https://hospitable-energy-production.up.railway.app/toyyibpay-callback',
+            'billExternalReferenceNo': telefon_pelanggan,
+            'billTo': nama_pelanggan,
+            'billPhone': telefon_pelanggan,
+            'billEmail': 'customer@sbltransport.com'
+        }
+        
+        response = requests.post(TOYYIBPAY_API_URL, data=payload)
+        result = response.json()
+        
+        if result and isinstance(result, list) and 'BillCode' in result[0]:
+            bill_code = result[0]['BillCode']
+            return f"https://toyyibpay.com/{bill_code}"
+    except Exception as e:
+        print(f"Ralat Create Bill ToyyibPay: {e}")
+    
+    return "https://toyyibpay.com/sbl-online"
 
 def tanya_gemini(user_id, mesej_user):
     global user_sessions
+    if user_id not in user_sessions: user_sessions[user_id] = []
     
-    # Jika user baru belum ada memori, cipta senarai kosong untuk dia
-    if user_id not in user_sessions:
-        user_sessions[user_id] = []
-        
     chat_history = user_sessions[user_id]
-    
     chat_history.append({"role": "user", "parts": [{"text": mesej_user}]})
-    history_context = chat_history[-10:] # Ambil 10 mesej terawal untuk konteks dia sahaja
     
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
-    headers = {
-        "Content-Type": "application/json"
-    }
-    
-    payload = {
-        "contents": history_context,
-        "system_instruction": {
-            "parts": [{
-                "text": system_instruction
-            }]
-        }
-    }
+    if "submit booking" in mesej_user.lower():
+        detail_sewaan = "".join([m["parts"][0]["text"] for m in chat_history if m["role"]=="user"][-3:])
+        
+        link_bayaran = create_toyyibpay_bill(nama_pelanggan="Pelanggan SBL", telefon_pelanggan=user_id, detail_tempahan=detail_sewaan)
+        
+        hantar_ke_admin(f"--- TEMPAHAN BARU (MENUNGGU BAYARAN) ---\nNo Tel: {user_id}\n{detail_sewaan}")
+        
+        return f"Booking diterima! Sila buat pembayaran melalui link rasmi ini: {link_bayaran}. Selepas pembayaran berjaya, sistem akan terus sahkan dan maklumkan kepada admin kami."
+
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+    payload = {"contents": chat_history[-10:], "system_instruction": {"parts": [{"text": system_instruction}]}}
     
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        data = response.json()
-        
-        if "error" in data:
-            print("Ralat dari Gemini API:", data["error"])
-            return "Maaf bos, sistem tengah rehat sekejap. Boleh ulang mesej ya? 😅"
-            
-        jawapan_ai = data['candidates'][0]['content']['parts'][0]['text']
+        response = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        jawapan_ai = response.json()['candidates'][0]['content']['parts'][0]['text']
         chat_history.append({"role": "model", "parts": [{"text": jawapan_ai}]})
-        
         return jawapan_ai
-    except Exception as e:
-        print("Ralat Gemini:", e)
-        return "Maaf bos, line slow sikit. Boleh ulang mesej ya? 😅"
+    except:
+        return "Maaf, sistem sedang sibuk."
 
-def hantar_whatsapp(nombor_penerima, mesej_balasan):
-    print("MENCUBA HANTAR KE WHATSAPP...")
-    url = f"https://graph.facebook.com/v20.0/{WHATSAPP_PHONE_ID}/messages"
-    headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": nombor_penerima,
-        "type": "text",
-        "text": {"body": mesej_balasan},
-    }
-    response = requests.post(url, json=payload, headers=headers)
-    print("HASIL RESPON META:", response.text)
-    return response.json()
-
-@app.route("/", methods=["GET"])
-def home():
-    return "Zulfa Bot Server is running active!", 200
-
-@app.route("/webhook", methods=["GET"])
-def verify_webhook():
-    mode = request.args.get("hub.mode")
-    token = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
+@app.route("/toyyibpay-callback", methods=["POST"])
+def toyyibpay_callback():
+    data = request.form.to_dict()
+    status = data.get("status")
+    refno = data.get("refno")
+    order_id = data.get("order_id", "")
+    received_hash = data.get("hash")
+    billcode = data.get("billcode")
+    telefon_pelanggan = data.get("customerPhone") or data.get("billExternalReferenceNo")
     
-    if mode and token:
-        if mode == "subscribe" and token == VERIFY_TOKEN:
-            print("WEBHOOK_VERIFIED")
-            return challenge, 200
-        else:
-            return "Verification failed", 403
-            
-    return "Hello world, webhook endpoint is active!", 200
-
-@app.route("/webhook", methods=["POST"])
-def whatsapp_webhook():
-    body = request.get_json()
-    print("MESEJ JSON DITERIMA:", body)
-
-    try:
-        entry = body.get("entry", [])
-        if entry:
-            changes = entry[0].get("changes", [])
-            if changes:
-                value = changes[0].get("value", {})
-                messages = value.get("messages", [])
-                
-                if messages:
-                    from_number = messages[0]["from"]
-                    msg_body = messages[0]["text"]["body"]
-
-                    print(f"BERJAYA BACA -> Dari: {from_number} | Mesej: {msg_body}")
-
-                    # Hantar nombor telefon (from_number) supaya memori dipisahkan
-                    balasan_ai = tanya_gemini(from_number, msg_body)
-                    print(f"Balasan AI: {balasan_ai}")
-
-                    hantar_whatsapp(from_number, balasan_ai)
-
-        return jsonify({"status": "success"}), 200
+    raw_string = f"{TOYYIBPAY_SECRET_KEY}{status}{order_id}{refno}ok"
+    expected_hash = hashlib.md5(raw_string.encode()).hexdigest()
+    
+    if received_hash == expected_hash and status == '1':
+        if telefon_pelanggan:
+            hantar_whatsapp(telefon_pelanggan, "Alhamdulillah! Pembayaran anda telah berjaya disahkan. Tempahan anda kini dalam proses pihak admin.")
         
-    except Exception as e:
-        print(f"Ralat Webhook: {e}")
-        return jsonify({"status": "error"}), 500
+        pesan_admin = f"🎉 PEMBAYARAN BERJAYA DISAHKAN!\n\nNo Rujukan: {refno}\nBillCode: {billcode}\nNo Telefon Pelanggan: {telefon_pelanggan}\nStatus: Berjaya (Paid)"
+        hantar_ke_admin(pesan_admin)
+        
+        return jsonify({"status": "ok"}), 200
+    
+    return jsonify({"status": "invalid"}), 200
+
+@app.route("/webhook", methods=["GET", "POST"])
+def webhook():
+    if request.method == "GET":
+        mode = request.args.get("hub.mode")
+        token = request.args.get("hub.verify_token")
+        challenge = request.args.get("hub.challenge")
+        if mode == "subscribe" and token == VERIFY_TOKEN:
+            return challenge, 200
+        return "Forbidden", 403
+    
+    body = request.get_json()
+    try:
+        msg = body["entry"][0]["changes"][0]["value"]["messages"][0]
+        from_number = msg["from"]
+        msg_body = msg["text"]["body"]
+        balasan = tanya_gemini(from_number, msg_body)
+        hantar_whatsapp(from_number, balasan)
+    except:
+        pass
+    return jsonify({"status": "success"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
