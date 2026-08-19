@@ -1,5 +1,6 @@
 import os
 import csv
+import traceback
 import requests
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
@@ -52,7 +53,8 @@ def hantar(to, msg, type="text", image_url=None):
         payload["image"] = {"link": image_url, "caption": msg}
     
     try:
-        requests.post(url, json=payload, headers=headers)
+        res = requests.post(url, json=payload, headers=headers)
+        print(f"Hantar response status: {res.status_code}, body: {res.text}")
     except Exception as e:
         print(f"Error sending message: {e}")
 
@@ -127,7 +129,7 @@ def tanya_gemini(text):
     if not GEMINI_API_KEY:
         return None
     try:
-        # Menggunakan model gemini-3.5-flash-lite seperti yang diminta
+        # Kekal menggunakan model gemini-3.5-flash-lite
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         headers = {"Content-Type": "application/json"}
         prompt = f"""
@@ -239,6 +241,7 @@ def webhook():
         return "Hello World", 200
 
     data = request.get_json()
+    print(f"Incoming Webhook Data: {data}")
     try:
         msg = data["entry"][0]["changes"][0]["value"]["messages"][0]
         user, body = msg["from"], msg["text"]["body"]
@@ -249,7 +252,8 @@ def webhook():
         else:
             hantar(user, proses_mesej(user, body))
     except Exception as e:
-        print(f"Webhook Error: {e}")
+        print(f"WEBHOOK ERROR KRONIK: {e}")
+        traceback.print_exc()
         pass
     return jsonify({"status": "success"}), 200
 
