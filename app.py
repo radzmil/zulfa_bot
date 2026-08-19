@@ -7,13 +7,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Cuba import library genai, jika tak ada, set jadi None supaya tak crash
-try:
-    from google import genai
-    GEMINI_AVAILABLE = True
-except ImportError:
-    GEMINI_AVAILABLE = False
-
 app = Flask(__name__)
 
 # Configuration
@@ -25,16 +18,7 @@ TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembaya
 SALES_LINK = "https://wa.link/o3z1bz"
 COMPANY = "SHAHRIL BASRI LEISURE ENTERPRISE"
 DATA_FILE = "data_pelanggan.csv"
-
-# Inisialisasi Klien Gemini jika library ada
-client = None
-if GEMINI_AVAILABLE:
-    gemini_api_key = os.getenv("GEMINI_API_KEY")
-    if gemini_api_key:
-        try:
-            client = genai.Client(api_key=gemini_api_key)
-        except:
-            pass
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 ALLOWED_PICKUP = [
     "bukit raja", "damansara", "petaling", "sungai buloh",
@@ -138,6 +122,31 @@ def kira_harga(destinasi, teks_penuh, jarak_km=70):
 
     return trip_label, int(final_price)
 
+def tanya_gemini(text):
+    if not GEMINI_API_KEY:
+        return None
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={GEMINI_API_KEY}"
+        headers = {"Content-Type": "application/json"}
+        prompt = f"""
+        Awak adalah Zulfa, staf khidmat pelanggan rasmi untuk syarikat SBL TRANSPORT (Shahril Basri Leisure Enterprise).
+        Gaya bahasa awk: Mesra, ramah, guna bahasa Melayu santai/pasar (awk, kitorang, tau, etc.), sopan, dan prihatin macam manusia betul.
+        Syarikat kita khusus menyediakan sewaan BAS 44 SEAT sahaja buat masa ni. (Van/MPV belum buka online).
+        Kalau pelanggan tanya pasal sewa bas atau harga, jemput mereka isi borang sewaan bas 44 seat.
+        Link WhatsApp Sales rasmi kita ialah: {SALES_LINK}
+        
+        Mesej daripada pelanggan: "{text}"
+        
+        Jawab mesej pelanggan ini dengan bijak, natural, dan ringkas sebagai Zulfa:
+        """
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        res = requests.post(url, json=payload, headers=headers)
+        data = res.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+        print(f"Gemini API Error: {e}")
+        return None
+
 def proses_mesej(user, text):
     msg = text.lower()
 
@@ -202,30 +211,12 @@ def proses_mesej(user, text):
             hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN (BAS)*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
         return "Baik awk! Terima kasih. Saya sedang semak dengan admin. Tunggu sebentar ya! 🙏"
 
-    # Jika client ada (Gemini berfungsi)
-    if client:
-        try:
-            prompt = f"""
-            Awak adalah Zulfa, staf khidmat pelanggan rasmi untuk syarikat SBL TRANSPORT (Shahril Basri Leisure Enterprise).
-            Gaya bahasa awk: Mesra, ramah, guna bahasa Melayu santai/pasar (awk, kitorang, tau, etc.), sopan, dan prihatin macam manusia betul.
-            Syarikat kita khusus menyediakan sewaan BAS 44 SEAT sahaja buat masa ni. (Van/MPV belum buka online).
-            Kalau pelanggan tanya pasal sewa bas atau harga, jemput mereka isi borang sewaan bas 44 seat.
-            Link WhatsApp Sales rasmi kita ialah: {SALES_LINK}
-            
-            Mesej daripada pelanggan: "{text}"
-            
-            Jawab mesej pelanggan ini dengan bijak, natural, dan ringkas sebagai Zulfa:
-            """
-            response = client.models.generate_content(
-                model="gemini-3.5-flash",
-                contents=prompt
-            )
-            if response and response.text:
-                return response.text
-        except Exception as e:
-            print(f"Gemini AI Error: {e}")
+    # Cuba jawab guna Gemini API secara langsung
+    jawapan_ai = tanya_gemini(text)
+    if jawapan_ai:
+        return jawapan_ai
 
-    # Fallback mesra jika Gemini belum aktif atau gagal
+    # Fallback mesra jika API tiada
     return "Hai awk! 😊 Sila isi borang sewaan bas 44 seat untuk semak harga laluan kita, atau ada apa-apa lagi yang Zulfa boleh bantu?"
 
 @app.route("/webhook", methods=["GET", "POST"])
