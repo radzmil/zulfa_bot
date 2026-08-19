@@ -4,6 +4,7 @@ import requests
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
+from google import genai
 
 load_dotenv()
 
@@ -18,6 +19,10 @@ TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembaya
 SALES_LINK = "https://wa.link/o3z1bz"
 COMPANY = "SHAHRIL BASRI LEISURE ENTERPRISE"
 DATA_FILE = "data_pelanggan.csv"
+
+# Inisialisasi Klien Gemini (Pastikan GEMINI_API_KEY ada dalam environment variable Railway)
+gemini_api_key = os.getenv("GEMINI_API_KEY")
+client = genai.Client(api_key=gemini_api_key) if gemini_api_key else None
 
 # Senarai Mukim Pickup Dibenarkan (Selangor & KL)
 ALLOWED_PICKUP = [
@@ -41,7 +46,6 @@ CUTI_UMUM = [
     "25/12/2026", # Hari Krismas
 ]
 
-# Function to send messages via WhatsApp API
 def hantar(to, msg, type="text", image_url=None):
     url = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"
     headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
@@ -57,7 +61,6 @@ def hantar(to, msg, type="text", image_url=None):
     except Exception as e:
         print(f"Error sending message: {e}")
 
-# Function to save customer data
 def simpan_data(no_tel, detail):
     file_exists = os.path.isfile(DATA_FILE)
     try:
@@ -69,7 +72,6 @@ def simpan_data(no_tel, detail):
     except Exception as e:
         print(f"Error saving data: {e}")
 
-# Fungsi Semak Tarikh (Mesti 8 hari ke atas & Bukan Hari Cuti Umum)
 def validasi_tarikh(tarikh_str):
     try:
         t = datetime.strptime(tarikh_str.strip(), "%d/%m/%Y")
@@ -79,7 +81,7 @@ def validasi_tarikh(tarikh_str):
         tarikh_semak_str = t.strftime("%d/%m/%Y")
 
         if t.date() < hari_ini:
-            return False, "Tarikh tempahan telah lepas (lampau)."
+            return False, "Tarikh tempahan telah lepas."
         elif t.date() < min_tarikh:
             return False, "Tempahan kurang dari 8 hari (Urgent booking)."
         elif tarikh_semak_str in CUTI_UMUM:
@@ -87,13 +89,11 @@ def validasi_tarikh(tarikh_str):
         
         return True, t
     except:
-        return False, "Format tarikh salah. Sila guna format DD/MM/YYYY (Contoh: 30/08/2026)."
+        return False, "Format tarikh salah (Guna format DD/MM/YYYY)."
 
-# Fungsi Pengiraan Harga Automatik (Base Zon + Extra KM)
 def kira_harga(destinasi, teks_penuh, jarak_km=70):
     dest = destinasi.lower()
     
-    # 1. Tentukan Harga Asas Zon (Asas 50km pertama)
     if any(x in dest for x in ["genting", "bukit tinggi"]):
         base_price = 1000
     elif "bentong" in dest:
@@ -109,14 +109,12 @@ def kira_harga(destinasi, teks_penuh, jarak_km=70):
     else:
         base_price = 700
 
-    # 2. Kira Kos Tambahan KM (Jika melebihi 50km, caj RM3/km)
     extra_km_price = 0
     if jarak_km > 50:
         extra_km_price = (jarak_km - 50) * 3
 
     one_way_total = base_price + extra_km_price
 
-    # 3. Semak Trip Sehala atau Pergi Balik
     is_two_way = False
     if "return" in teks_penuh.lower() or "pergi balik" in teks_penuh.lower():
         is_two_way = True
@@ -130,46 +128,11 @@ def kira_harga(destinasi, teks_penuh, jarak_km=70):
 
     return trip_label, int(final_price)
 
-# Main Logic / Zulfa's Persona & Flow
 def proses_mesej(user, text):
     msg = text.lower()
 
-    # 1. Initial Greeting / Filtering Vehicle
-    if any(x in msg for x in ["hi", "hello", "sewa", "tanya"]):
-        return "Hai, assalammualaikum! 😊\nSy Zulfa dr team SBL TRANSPORT. Tq sbb pm kitorang tau.\n\nBole Zulfa tau, awk nk sewa bas (44 seat), van, atau MPV ya?"
-    
-    if any(x in msg for x in ["mpv", "suv", "van"]):
-        return f"Untuk sewaan van & MPV, kitorang belum buka tempahan online lagi bos 🙏\n\nTapi kalau awk berminat, awk boleh terus berhubung dengan team Sales kitorang untuk bincang lanjut kat sini ya 👇\n\n📲 {SALES_LINK}"
-    
-    if "tour" in msg or "rombongan" in msg or "jalan" in msg:
-        return f"Wah seronoknya nk pegi jalan2! 🚌✨\n\nUtk pakej tour / rombongan pulak, harga ikut itinerary & berapa hari trip awk. Utk dpt harga paling ngam, kawan sy dr bahagian Sales bole tolong kirakan terus tau.\n\nAwk bole klik link ni utk terus sembang dgn team Sales kitorang ya:\n📲 {SALES_LINK}"
-
-    # 2. Berikan Borang Kosong Jika Tanya Harga / Bas
-    if "harga" in msg or "ke " in msg or "dr " in msg or "dari " in msg or "bas" in msg or "44" in msg:
-        return (
-            f"Orite! Utk bas 44 seat ni, tolong isi & lengkapkan borang maklumat bawah ni dulu ya supaya Zulfa bole semak laluan & kirakan harga tepat utk awk 👇\n\n"
-            f"📝 *BORANG MAKLUMAT SEWAAN*\n"
-            f"Syarikat: \n"
-            f"Alamat: \n"
-            f"Nama: \n"
-            f"No. tel: \n"
-            f"Tarikh: \n"
-            f"Masa: \n"
-            f"Lokasi Ambil: \n"
-            f"Lokasi Hantar: \n"
-            f"Jumlah Penumpang: \n\n"
-            f"🔄 *Maklumat RETURN trip* (Wajib isi jika Two Way / Kosongkan jika One Way):\n"
-            f"Tarikh: \n"
-            f"Masa: \n"
-            f"Pick-up: \n"
-            f"Drop-off: \n"
-            f"Pax: \n\n"
-            f"*(Salin borang di atas, isi butiran anda, dan hantar semula di sini)* 😊"
-        )
-
-    # 3. Semakan Borang, Tarikh, Kawasan & Pengiraan Harga Automatik
+    # 1. Jika pelanggan hantar borang lengkap
     if "lokasi ambil:" in msg or "lokasi hantar:" in msg:
-        # A. Semak Tarikh
         tarikh_raw = ""
         try:
             for line in text.split("\n"):
@@ -190,12 +153,10 @@ def proses_mesej(user, text):
                 f"📲 {SALES_LINK}"
             )
 
-        # B. Semak Kawasan Pickup Dibenarkan
         lokasi_sah = any(lokasi in msg for lokasi in ALLOWED_PICKUP)
         if not lokasi_sah:
             return f"Alamak, sorry tau awk 🙏 Untuk lokasi pickup kat luar kawasan Selangor, KL & KLIA, sistem kitorang tak sokong.\n\nTapi jangan risau, awk boleh terus berhubung dengan team Sales kitorang untuk bincang lanjut kat sini ya 👇\n\n📲 {SALES_LINK}"
 
-        # C. Ekstrak Lokasi Hantar & Kira Harga
         destinasi_hantar = "Kuala Lumpur"
         try:
             for line in text.split("\n"):
@@ -208,7 +169,6 @@ def proses_mesej(user, text):
 
         label_trip, harga_akhir = kira_harga(destinasi_hantar, text)
 
-        # D. Simpan Data & Hantar Notifikasi ke Admin
         simpan_data(user, text + f" | Harga: RM{harga_akhir}")
         if ADMIN:
             hantar(ADMIN, f"📋 *TEMPAHAN BAS 44 SEAT*\n📱 Rujukan: {user}\n💰 Harga Sistem: RM{harga_akhir}\n\n{text}")
@@ -216,7 +176,6 @@ def proses_mesej(user, text):
         if QR_IMAGE_URL:
             hantar(user, f"DuitNow QR - {COMPANY}\n(Rujukan: {user})", type="image", image_url=QR_IMAGE_URL)
             
-        # E. Respon Sebut Harga & Kaedah Pembayaran
         return (
             f"Zulfa dah semak borang awk! Tarikh sah & laluan dibenarkan. Ni anggaran harga trip awk ya 😊\n\n"
             f"📊 *SEMAKAN SEBUT HARGA*\n"
@@ -229,12 +188,35 @@ def proses_mesej(user, text):
             f"Dah siap bayar, sila balas *'dah bayar'* kat sini ya! 🙏"
         )
 
-    # 4. Pengesahan Bayaran Manual
     if "dah bayar" in msg:
         if ADMIN:
             hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN (BAS)*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
         return "Baik awk! Terima kasih. Saya sedang semak dengan admin. Tunggu sebentar ya! 🙏"
 
+    # 2. Jika soalan biasa / santai, gunakan kuasa Gemini 3.5/2.5 Flash Lite!
+    if client:
+        try:
+            prompt = f"""
+            Awak adalah Zulfa, staf khidmat pelanggan rasmi untuk syarikat SBL TRANSPORT (Shahril Basri Leisure Enterprise).
+            Gaya bahasa awk: Mesra, ramah, guna bahasa Melayu santai/pasar (awk, kitorang, tau, etc.), sopan, dan prihatin macam manusia betul.
+            Syarikat kita khusus menyediakan sewaan BAS 44 SEAT sahaja buat masa ni. (Van/MPV belum buka online).
+            Kalau pelanggan tanya pasal sewa bas atau harga, jemput mereka isi borang sewaan bas 44 seat.
+            Link WhatsApp Sales rasmi kita ialah: {SALES_LINK}
+            
+            Mesej daripada pelanggan: "{text}"
+            
+            Jawab mesej pelanggan ini dengan bijak, natural, dan ringkas sebagai Zulfa:
+            """
+            response = client.models.generate_content(
+                model="gemini-2.5-flash", # atau gemini-2.5-flash-lite mengikut model sokongan
+                contents=prompt
+            )
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            print(f"Gemini AI Error: {e}")
+
+    # Fallback biasa jika API gagal
     return "Orite awk, ada apa-apa lagi yang Zulfa boleh bantu untuk sewaan bas kita? 😊"
 
 @app.route("/webhook", methods=["GET", "POST"])
@@ -247,7 +229,6 @@ def webhook():
         msg = data["entry"][0]["changes"][0]["value"]["messages"][0]
         user, body = msg["from"], msg["text"]["body"]
         
-        # Admin confirmation shortcut
         if ADMIN and user == ADMIN and body.lower().startswith("done"):
             target = body.split()[1]
             hantar(target, "Alhamdulillah! Pembayaran anda telah disahkan. Tempahan sah! 🎉")
