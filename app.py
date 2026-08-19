@@ -127,7 +127,7 @@ def tanya_gemini(text):
     if not GEMINI_API_KEY:
         return None
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         headers = {"Content-Type": "application/json"}
         prompt = f"""
         Awak adalah Zulfa, staf khidmat pelanggan rasmi untuk syarikat SBL TRANSPORT (Shahril Basri Leisure Enterprise).
@@ -143,7 +143,13 @@ def tanya_gemini(text):
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         res = requests.post(url, json=payload, headers=headers)
         data = res.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        
+        # Semak selamat sebelum ambil data candidates
+        if "candidates" in data and len(data["candidates"]) > 0:
+            return data["candidates"][0]["content"]["parts"][0]["text"]
+        else:
+            print(f"Gemini API Response Invalid: {data}")
+            return "Hai awk! 😊 Sila isi borang sewaan bas 44 seat untuk semak harga laluan kita, atau ada apa-apa lagi yang Zulfa boleh bantu?"
     except Exception as e:
         print(f"Gemini API Error: {e}")
         return None
