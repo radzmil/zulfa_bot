@@ -21,8 +21,6 @@ COMPANY = "SHAHRIL BASRI LEISURE ENTERPRISE"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 VERIFY_TOKEN_VAL = os.getenv("VERIFY_TOKEN", "sbleisure_secure_token")
 
-SESSION_STATE = {}
-
 BORANG_TEMPLATE = (
     "📝 *BORANG MAKLUMAT SEWAAN*\n\n"
     "Jenis Trip (One Way/Two Way): \n"
@@ -40,40 +38,41 @@ def hantar(to, msg):
     payload = {"messaging_product": "whatsapp", "to": to, "type": "text", "text": {"body": msg}}
     requests.post(url, json=payload, headers=headers)
 
-def semak_gemini(text, mode="chat"):
+def semak_gemini(text):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
-        # Prompt "Zulfa" yang lebih natural
         prompt = f"""
-        Awak adalah Zulfa, staf khidmat pelanggan yang sangat peramah untuk {COMPANY}. 
-        Gaya bahasa: Melayu santai, mesra, suka guna panggilan 'awk', 'kitorang', 'tau'.
-        Jangan jadi robot. Jangan asyik ulang soalan yang sama.
+        Awak adalah Zulfa, staf khidmat pelanggan yang peramah untuk {COMPANY}. 
+        Gaya bahasa: Melayu santai, mesra, guna panggilan 'awk', 'kitorang', 'tau'.
         
-        Konteks: {text}
+        PENTING:
+        - Syarikat kita HANYA menyediakan perkhidmatan sewaan MPV, Van, dan Bas Persiaran sahaja.
+        - Jika pelanggan minta sewa bot, speed boat, lori, motosikal, atau kenderaan lain yang KITORANG TAK ADA, tolak dengan mesra dan beritahu kitorang hanya ada MPV, Van, dan Bas Persiaran. JANGAN BERIKAN BORANG SEWAAN.
+        - Jaga ayat supaya kemas dan tiada typo pelik.
         
-        Tugasan:
-        1. Jika pelanggan tanya 'ni syarikat apa', jawab dengan mesra dan ceritakan kitorang pakar sewa MPV/Van/Bas.
-        2. Jika pelanggan sekadar menyapa, balas dengan ramah.
-        3. JANGAN hantar borang melainkan pelanggan memang tunjuk minat nak sewa.
-        4. Jika pelanggan tanya pasal sewaan, baru ajak mereka isi borang.
+        Mesej pelanggan: "{text}"
         """
         res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, headers={"Content-Type": "application/json"})
         return res.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except: return "Boleh saya bantu apa-apa lagi awk? 😊"
+    except: 
+        return "Boleh saya bantu apa-apa lagi awk? 😊"
 
 def proses_mesej(user, text):
     msg = text.lower()
     
-    # Logik perbualan santai
+    # Tapisan jika pelanggan minta kenderaan luar
+    kenderaan_luar = ["bot", "boat", "speed boat", "lori", "moto", "motosikal", "kereta"]
+    if any(k in msg for k in kenderaan_luar):
+        return "Eh maaf sangat awk! Kitorang tak ada perkhidmatan sewaan tu. Kitorang di SB Leisure HANYA sediakan sewaan MPV, Van, dan Bas Persiaran je tau. Ada nak sewa MPV, Van, atau Bas ke? 😊"
+
     if any(k in msg for k in ["hi", "hello", "salam", "selamat"]):
         return f"Waalaikumussalam/Hai awk! Saya Zulfa dari {COMPANY}. Ada apa-apa yang saya boleh bantu hari ni? 😊"
     
     if "syarikat" in msg or "sb leisure" in msg:
-        return "Ye betul awk! Kitorang adalah SB Leisure (Shahril Basri Leisure Enterprise). Kitorang memang pakar sediakan servis sewaan MPV, Van, dan Bas persiaran untuk trip awk ke mana sahaja. Ada plan nak pergi mana-mana ke tu?"
+        return "Ye betul awk! Kitorang adalah SB Leisure (Shahril Basri Leisure Enterprise). Kitorang pakar sediakan servis sewaan MPV, Van, dan Bas persiaran untuk trip awk ke mana sahaja. Ada plan nak pergi mana-mana ke tu?"
 
-    # Jika pelanggan tanya pasal sewa
-    if any(k in msg for k in ["sewa", "nak guna", "harga"]):
-        return f"Boleh sangat awk! Kitorang ada banyak pilihan kenderaan. Untuk kitorang bagi sebut harga yang tepat, boleh awk tolong isikan borang ringkas ni? 😊\n\n{BORANG_TEMPLATE}"
+    if any(k in msg for k in ["sewa", "nak guna", "harga", "van", "bas", "mpv"]):
+        return f"Boleh sangat awk! Kitorang ada sediakan pilihan MPV, Van, dan Bas Persiaran. Untuk kitorang semak dan bagi sebut harga, boleh awk tolong isikan borang ringkas ni? 😊\n\n{BORANG_TEMPLATE}"
 
     return semak_gemini(text)
 
