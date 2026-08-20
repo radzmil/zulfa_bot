@@ -71,6 +71,33 @@ SERVICES = {
 }
 
 # --------------------------------------------------
+# SOP KAWASAN PICKUP & HARGA ASAS BAS
+# --------------------------------------------------
+KAWASAN_PICKUP_DIBENARKAN = {
+    "selangor": {
+        "petaling": ["bukit raja", "damansara", "petaling", "sungai buloh"],
+        "hulu langat": ["ampang", "beranang", "cheras", "hulu langat", "kajang", "semenyih"],
+        "klang": ["kapar", "klang"],
+        "gombak": ["ampang", "batu", "rawang", "setapak", "ulu kelang"],
+        "kuala langat": ["bandar", "batu", "jugra", "kelanang", "morib", "tanjong duabelas", "telok panglima garang"],
+        "kuala selangor": ["api-api", "batang berjuntai", "bestari jaya", "ijok", "jeram", "kuala selangor", "pasangan", "tanjong karang", "ujong pematang", "ulu tinggi"],
+        "sepang": ["dengkil", "labu", "sepang"],
+        "sabak bernam": ["bagan nakhoda omar", "panchang bedena", "pasiran panjang", "sabak", "sungai panjang"],
+        "hulu selangor": ["ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam"]
+    },
+    "kuala lumpur": ["kuala lumpur", "batu", "setapak", "ampang", "ulu kelang"],
+    "lain_lain": ["klia", "cyberjaya", "putrajaya"]
+}
+
+HARGA_ASAS_PICKUP = {
+    "bukit raja": 900, "sungai buloh": 900, "damansara": 800, "petaling": 800,
+    "ampang": 700, "cheras": 700, "ulu langat": 700, "beranang": 900,
+    "kajang": 800, "semenyih": 800, "kapar": 900, "klang": 900,
+    "batu": 700, "setapak": 700, "ulu kelang": 700, "rawang": 800,
+    "dengkil": 800, "labu": 800, "sepang": 800
+}
+
+# --------------------------------------------------
 # KONFIGURASI WHATSAPP & BOT
 # --------------------------------------------------
 TOKEN = os.getenv("WHATSAPP_TOKEN")
@@ -118,14 +145,14 @@ def tanya_ai_seperti_manusia(user, text):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         
-        # Arahan ketat mengenai pembahagian tugas sewaan
+        # Arahan SOP Pickup & Skop Bas
         system_instruction = (
-            "Anda adalah Zulfa, pegawai khidmat pelanggan bagi SB Leisure Transportation. "
-            "PERATURAN UTAMA SEWAAN KENDERAAN: "
-            "1. Anda (Zulfa) HANYA boleh melayan dan memproses tempahan untuk SEWAAN BAS sahaja. "
-            "2. Jika pelanggan mahu sewa Van, MPV (Vellfire/Innova), atau Lori, anda TIDAK BOLEH uruskan. Terus arahkan mereka berurusan dengan team sales melalui link WhatsApp rasmi ini: https://wa.link/nrmesv. "
-            "3. Jika pelanggan minta servis lain di luar skop (seperti basikal, motor, dll), tolak dengan sopan. "
-            "ARAHAN GAYA: Jawab dengan SANGAT PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya WhatsApp biasa (maksimum 1-2 ayat pendek)."
+            "Anda adalah Zulfa, pegawai khidmat pelanggan SB Leisure Transportation. "
+            "SOP & PERATURAN SYARIKAT: "
+            "1. Anda (Zulfa) HANYA uruskan SEWAAN BAS SAHAJA. Jika pelanggan nak sewa Van, MPV, atau Lori, arahkan mereka terus ke link sales WhatsApp ini: https://wa.link/nrmesv. "
+            "2. SOP KAWASAN PICKUP BAS: Pickup bas HANYA dibenarkan di kawasan Selangor, Kuala Lumpur, KLIA, Cyberjaya, dan Putrajaya sahaja. Jika pelanggan minta pickup di luar kawasan ini (cth: Kelantan, Johor, Kedah), tolak dengan sopan. "
+            "3. Rujukan Harga Asas Bas mengikut kawasan pickup (cth: Ampang/Cheras RM700, Petaling/Damansara RM800, Bukit Raja/Klang RM900). "
+            "ARAHAN GAYA: Jawab dengan SANGAT PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya WhatsApp (maksimum 1-2 ayat pendek)."
         )
         
         all_data = muat_data_customer()
