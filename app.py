@@ -113,7 +113,6 @@ def tanya_gemini(text):
 def proses_mesej(user, text):
     msg = text.lower()
 
-    # Jika pelanggan hantar borang yang telah diisi
     if "borang maklumat sewaan" in msg or "pick-up point" in msg or "drop-off point" in msg or "syarikat :" in msg:
         simpan_data(user, text)
         if ADMIN:
@@ -139,15 +138,12 @@ def proses_mesej(user, text):
             hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
         return "Baik awk! Terima kasih. Saya sedang semak dengan admin. Tunggu sebentar ya! 🙏"
 
-    # Hanya beri borang jika mesej jelas menyentuh kenderaan yang kitorang ada (mpv, van, bas, sewa, harga, nak sewa)
     kenderaan_sedia_ada = ["mpv", "van", "bas", "bus", "persiaran"]
     ada_kaitan_kenderaan = any(k in msg for k in kenderaan_sedia_ada)
     
-    # Jika pelanggan kata "nak sewa" tapi tak sebut bot/moto, atau sebut kenderaan kitorang
-    if ada_kaitan_kenderaan or ("nak sewa" in msg and not any(x in msg for x in ["bot", "moto", "motosikal", "lori", "kereta"]));
+    if ada_kaitan_kenderaan or ("nak sewa" in msg and not any(x in msg for x in ["bot", "moto", "motosikal", "lori", "kereta"])):
         return BORANG_TEMPLATE
 
-    # Kalau tanya benda lain (macam sewa bot, dsb), biar AI Gemini handle untuk tolak dengan baik
     jawapan_ai = tanya_gemini(text)
     if jawapan_ai:
         return jawapan_ai
