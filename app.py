@@ -7,13 +7,78 @@ load_dotenv()
 
 app = Flask(__name__)
 
+# --------------------------------------------------
+# MAKLUMAT KORPORAT & PASUKAN (SHAHRILL BASRI LEISURE ENTERPRISE)
+# --------------------------------------------------
+COMPANY_PROFILE = {
+    "commercial_name": "SB LEiSURE TRANSPORTATION",
+    "legal_name": "Shahril Basri Leisure Enterprise",
+    "registration_no": "202203168334 (003413019-W)",
+    "ssm_expiry": "Sah sehingga 28 Ogos 2028",
+    "slogan": "Your Destination, Our Priority!",
+    "address": "No. 8-1, 9-1, First Floor, Laman Niaga@Ampang Waterfront, Jalan AWF 3A, Ampang Waterfront, 68000 Ampang, Selangor",
+    "operating_hours": "24 Jam / 7 Hari Seminggu",
+    "email": "sbltransport.my@gmail.com",
+    "social_media": "@sbleisure.my",
+    "linktree": "https://linktr.ee/SBLeisure.my",
+    "contacts": [
+        "+60 16-260 1885",
+        "+60 13-243 4200",
+        "+60 12-392 1885"
+    ]
+}
+
+GOV_AND_FINANCE = {
+    "mof_certificate_no": "K98267180554388213",
+    "mof_validity": "27/03/2026 – 26/03/2029",
+    "bank": "CIMB Bank Berhad",
+    "account_no": "860 5247 780",
+    "swift_code": "CIBBMYKLXXX"
+}
+
+MANAGEMENT = {
+    "director": "Puan Asiah binti Abdul Rahman",
+    "operations_manager": "Encik Mohd Shahril bin Noor Basri",
+    "assistant_operations_manager": "Shamsul",
+    "hr_admin_executive": "Sidek",
+    "customer_service_officer": {
+        "full_name": "Zulfa Jamaludin",
+        "nickname": "Zulfa",
+        "birth_year": 1988,
+        "birth_state": "Perak",
+        "current_location": "Ampang",
+        "position": "Pegawai Khidmat Pelanggan",
+        "facebook_profile": "https://www.facebook.com/profile.php?id=61592928645216"
+    }
+}
+
+SERVICES = {
+    "mof_codes": [
+        {"code": "110103", "description": "Pengangkutan, komponen dan aksesori kenderaan bermotor dan tidak bermotor/kereta"},
+        {"code": "110104", "description": "Pengangkutan, komponen dan aksesori kenderaan bermotor dan tidak bermotor/lori"},
+        {"code": "110105", "description": "Pengangkutan, komponen dan aksesori kenderaan bermotor dan tidak bermotor/bas"},
+        {"code": "110203", "description": "Pengangkutan, komponen dan aksesori jentera berat trailler dan aksesori"},
+        {"code": "221503", "description": "Perkhidmatan/penyewaan dan pengurusan/kenderaan/jentera/kenderaan rekreasi"}
+    ],
+    "fleet_types": ["Bas Persiaran", "Van", "MPV (Toyota Vellfire, Innova)", "Lori Logistik & Van Bagasi"],
+    "operations_scope": [
+        "Percutian & Rombongan Keluarga", "Lawatan Individu atau Berkumpulan",
+        "Lawatan Sekolah, Kolej & Universiti", "Lawatan Syarikat, Seminar & Kursus",
+        "Program Organisasi Kerajaan & Swasta", "Airport Transfer (KLIA & KLIA2)",
+        "Perjalanan Merentas Sempadan (Singapura & Thailand)", "Perkhidmatan Pemandu Pelancong (Tour Guide)"
+    ]
+}
+
+# --------------------------------------------------
+# KONFIGURASI WHATSAPP & BOT
+# --------------------------------------------------
 TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 ADMIN = os.getenv("GROUP_ADMIN_NUMBER")
 QR_IMAGE_URL = os.getenv("QR_IMAGE_URL", "")
 TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
 SALES_WHATSAPP_LINK = os.getenv("SALES_WHATSAPP_LINK", "https://wa.link/o3z1bz")
-COMPANY = "SHAHRIL BASRI LEISURE ENTERPRISE"
+COMPANY = COMPANY_PROFILE["legal_name"]
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 SESSION_STATE = {}
@@ -84,7 +149,7 @@ def hantar(to, msg, type="text", image_url=None):
 def semak_borang_lengkap(text_borang):
     if not GEMINI_API_KEY: return "LENGKAP"
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         prompt = f"""
         Periksa teks ini. Adakah pelanggan telah mengisi maklumat borang sewaan ini dengan lengkap (Tarikh, Masa, Lokasi Ambil, Lokasi Hantar, Jumlah Penumpang)?
         Jika masih ada ruangan kosong, balas: TIDAK_LENGKAP.
@@ -106,10 +171,10 @@ def muat_data_harga_fail(nama_fail="harga_bas.txt"):
                 data = baris.strip().split("|")
                 if len(data) == 3:
                     ambil = data[0].strip().lower()
-                    hantar = data[1].strip().lower()
+                    hantar_lokasi = data[1].strip().lower()
                     try:
                         harga = float(data[2].strip())
-                        senarai_harga[(ambil, hantar)] = harga
+                        senarai_harga[(ambil, hantar_lokasi)] = harga
                     except ValueError:
                         continue
     return senarai_harga
@@ -149,6 +214,25 @@ def kira_harga_bas(lokasi_ambil, lokasi_hantar, jarak_km):
 def proses_mesej(user, text):
     return "Sila hantarkan pertanyaan atau gunakan format tempahan yang disediakan."
 
+@app.route("/")
+def home():
+    return jsonify({
+        "status": "success",
+        "message": f"Selamat datang ke sistem API {COMPANY_PROFILE['commercial_name']}",
+        "company": COMPANY_PROFILE,
+        "finance": GOV_AND_FINANCE,
+        "management": MANAGEMENT,
+        "services": SERVICES
+    })
+
+@app.route("/api/company")
+def get_company_info():
+    return jsonify(COMPANY_PROFILE)
+
+@app.route("/api/services")
+def get_services():
+    return jsonify(SERVICES)
+
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET": return request.args.get("hub.challenge")
@@ -161,4 +245,4 @@ def webhook():
     return jsonify({"status": "success"}), 200
 
 if __name__ == "__main__": 
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=True)
