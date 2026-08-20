@@ -132,11 +132,16 @@ def simpan_info_pelanggan(user, mesej_baru):
     simpan_data_customer(all_data)
 
 def hantar(to, msg, type="text", image_url=None):
+    if not TOKEN or not PHONE_ID:
+        return
     url = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"
     payload = {"messaging_product": "whatsapp", "to": to, "type": type}
     if type == "text": payload["text"] = {"body": msg}
     elif type == "image": payload["image"] = {"link": image_url, "caption": msg}
-    requests.post(url, json=payload, headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"})
+    try:
+        requests.post(url, json=payload, headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}, timeout=10)
+    except Exception:
+        pass
 
 def tanya_ai_seperti_manusia(user, text):
     if not GEMINI_API_KEY:
@@ -145,9 +150,10 @@ def tanya_ai_seperti_manusia(user, text):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         
-        # Arahan persona Zulfa: Borang One Way / Two Way terus diberikan selepas pertanyaan sewaan bas
         system_instruction = (
-            "Anda adalah Zulfa, pegawai khidmat pelanggan SB Leisure Transportation. "
+            f"Anda adalah Zulfa, pegawai khidmat pelanggan SB Leisure Transportation. "
+            f"Sesi perbualan ini adalah KHUSUS untuk pelanggan dengan nombor ID/telefon: {user}. "
+            "Jangan pernah mencampuradukkan ingatan atau perbualan pelanggan ini dengan nombor telefon atau pelanggan lain. "
             "PERWATAKAN & GAYA BAHASA: "
             "1. Bahasa Melayu Malaysia yang santai, mesra, ramah, dan profesional. "
             "2. Jawab secara PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya WhatsApp (maksimum 1-2 ayat pendek). "
@@ -179,7 +185,7 @@ def tanya_ai_seperti_manusia(user, text):
 
         payload = {"contents": contents}
         
-        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
         response_data = res.json()
         return response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception as e:
@@ -212,7 +218,7 @@ def get_services():
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
-    if request.method == "GET": return request.args.get("hub.challenge")
+    if request.method == "GET": return request.args.get("hub.challenge", "")
     data = request.get_json()
     try:
         user = data["entry"][0]["changes"][0]["value"]["messages"][0]["from"]
@@ -225,4 +231,4 @@ def webhook():
     return jsonify({"status": "success"}), 200
 
 if __name__ == "__main__": 
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=True)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
