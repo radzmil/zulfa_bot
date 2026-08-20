@@ -77,7 +77,7 @@ TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 ADMIN = os.getenv("GROUP_ADMIN_NUMBER")
 QR_IMAGE_URL = os.getenv("QR_IMAGE_URL", "")
-TOYYIBPAY_LINK = os.getenv("TOYYIB_PAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
+TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
 SALES_WHATSAPP_LINK = os.getenv("SALES_WHATSAPP_LINK", "https://wa.link/o3z1bz")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
@@ -113,34 +113,25 @@ def hantar(to, msg, type="text", image_url=None):
 
 def tanya_ai_seperti_manusia(user, text):
     if not GEMINI_API_KEY:
-        return "Hai! Maaf ya, sistem tengah ada hal sikit. Ada apa yang boleh saya bantu untuk urusan sewaan bas atau kenderaan hari ni?"
+        return "Hai! Ada apa yang boleh dibantu untuk sewaan kenderaan?"
     
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         
-        # Arahan ketat agar AI bercakap betul-betul seperti manusia sebenar (natural, mesra, bahasa Malaysia santai)
+        # Arahan ketat: Jawab pendek, ringkas, padat gaya mesej WhatsApp sebenar
         system_instruction = (
-            "Anda adalah manusia sebenar yang bertindak sebagai pegawai khidmat pelanggan bagi syarikat "
-            "SB Leisure Transportation (Shahril Basri Leisure Enterprise). "
-            "PENTING: Jangan sekali-kali bercakap macam robot, jangan guna skrip meleret-leret yang kaku. "
-            "Gunakan gaya bahasa Melayu harian yang santai, mesra, ramah (friendly), kadang-kadang boleh guna singkatan "
-            "yang biasa rakyat Malaysia pakai (contoh: 'ok', 'boleh', 'takpe', 'tau') tapi tetap sopan dan profesional. "
-            "Syarikat kita sediakan perkhidmatan sewaan bas persiaran, van, MPV (Vellfire/Innova), dan lori logistik "
-            "untuk seluruh Semenanjung Malaysia, Singapura, dan Thailand. "
-            "Tugas anda adalah bersembang dan melayan pelanggan macam kawan atau staf kaunter yang mesra. "
-            "Kalau pelanggan tanya harga atau lokasi, jawab terus terang dengan bijak dan tanya details yang perlu (macam tarikh, tempat ambil, dsb) secara santai."
+            "Anda adalah pegawai khidmat pelanggan SB Leisure Transportation. "
+            "ARAHAN UTAMA: Jawab mesej pelanggan dengan SANGAT PENDEK, RINGKAS, PADAT, dan terus kepada poin seperti mesej WhatsApp biasa (maksimum 1 hingga 2 ayat pendek sahaja). "
+            "Jangan buat karangan panjang, jangan huraian meleret-leret. "
+            "Gunakan bahasa Malaysia santai dan mesra."
         )
         
-        # Ambil sejarah perbualan lepas pelanggan ni kalau ada (supaya AI ingat konteks)
         all_data = muat_data_customer()
         chat_history = []
         if user in all_data and "history" in all_data[user]:
-            # Ambil 5 mesej terakhir untuk jimatkan token dan kekalkan konteks
-            chat_history = all_data[user]["history"][-5:]
+            chat_history = all_data[user]["history"][-4:]
 
         contents = [{"parts": [{"text": system_instruction}]}]
-        
-        # Masukkan sejarah perbualan supaya AI betul-betul kenal pelanggan ni
         for h in chat_history:
             role_text = "Pelanggan" if h["sender"] == "customer" else "Anda"
             contents.append({"parts": [{"text": f"{role_text}: {h['message']}"}]})
@@ -153,18 +144,12 @@ def tanya_ai_seperti_manusia(user, text):
         response_data = res.json()
         return response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception as e:
-        return "Eh, line internet saya macam terputus sekejap tadi. Boleh ulang semula tak soalan awak?"
+        return "Maaf, line slow sikit. Boleh ulang?"
 
 def proses_mesej(user, text):
-    # Simpan mesej masuk pelanggan
     simpan_info_pelanggan(user, {"sender": "customer", "message": text})
-    
-    # Dapatkan jawapan manusia jadi-jadian daripada AI
     balasan_ai = tanya_ai_seperti_manusia(user, text)
-    
-    # Simpan respons bot
     simpan_info_pelanggan(user, {"sender": "bot", "message": balasan_ai})
-    
     return balasan_ai
 
 @app.route("/")
