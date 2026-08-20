@@ -43,7 +43,6 @@ KAWASAN_PICKUP_DIBENARKAN = {
 # SENARAI KADAR HARGA ASAS MENGIKUT MUKIM / KAWASAN PICKUP
 # --------------------------------------------------
 HARGA_ASAS_PICKUP = {
-    # Selangor
     "bukit raja": 900, "sungai buloh": 900,
     "damansara": 800, "petaling": 800,
     "ampang": 700, "cheras": 700, "ulu langat": 700,
@@ -56,8 +55,6 @@ HARGA_ASAS_PICKUP = {
     "dengkil": 800, "labu": 800, "sepang": 800,
     "bagan nakhoda omar": 1200, "panchang bedena": 1200, "pasiran panjang": 1200, "sabak": 1200, "sungai panjang": 1200,
     "ampang pecah": 1000, "batang kali": 1000, "buloh telor": 1000, "kalumpang": 1000, "kerling": 1000, "kuala kalumpang": 1000, "peretak": 1000, "rasa": 1000, "serendah": 1000, "sungai gumut": 1000, "sungai tinggi": 1000, "ulu bernam": 1000, "ulu yam": 1000,
-    
-    # Negeri Sembilan
     "ampangan": 1200, "lenggeng": 1200, "pantai": 1200, "rantau": 1200, "rasah": 1200, "seremban": 1200, "setul": 1200,
     "jimah": 1200, "linggi": 1200, "port dickson": 1200, "si rusa": 1200,
     "batu kikir": 1400, "chembong": 1400, "gadong": 1400, "kota": 1400, "kundor": 1400, "legong hilir": 1400, "legong hulu": 1400, "mambau": 1400, "nerasau": 1400, "pedas": 1400, "pilin": 1400, "seberang": 1400, "titian bintangor": 1400, "batu hampar": 1400, "gadong hilir": 1400, "rembau bandar": 1400,
@@ -99,14 +96,7 @@ def semak_borang_lengkap(text_borang):
         return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
     except: return "LENGKAP"
 
-# --------------------------------------------------
-# FUNGSI MEMBACA FAIL TEKS (HARGA TETAP)
-# --------------------------------------------------
 def muat_data_harga_fail(nama_fail="harga_bas.txt"):
-    """
-    Membaca fail teks harga_bas.txt (Format: ambil | hantar | harga)
-    Contoh: klia | rawang | 980.00
-    """
     senarai_harga = {}
     if os.path.exists(nama_fail):
         with open(nama_fail, "r", encoding="utf-8") as f:
@@ -124,20 +114,15 @@ def muat_data_harga_fail(nama_fail="harga_bas.txt"):
                         continue
     return senarai_harga
 
-# --------------------------------------------------
-# LOGIK PENGIRAAN HARGA HIBRID (FAIL + GATEKEEPING + FORMULA)
-# --------------------------------------------------
 def kira_harga_bas(lokasi_ambil, lokasi_hantar, jarak_km):
     lokasi_ambil = lokasi_ambil.strip().lower()
     lokasi_hantar = lokasi_hantar.strip().lower()
     
-    # 1. Semak dalam fail teks dahulu (Harga Tetap / Laluan Khusus cth: KLIA ke Rawang)
     data_fail = muat_data_harga_fail("harga_bas.txt")
     if (lokasi_ambil, lokasi_hantar) in data_fail:
         harga_tetap = data_fail[(lokasi_ambil, lokasi_hantar)]
         return f"✅ Anggaran Harga Bas (44 Seat): RM {harga_tetap:.2f} (Sumber: Harga Tetap Fail | Pickup: {lokasi_ambil.title()} ke {lokasi_hantar.title()})"
 
-    # 2. Validasi Kawasan Pickup (Gatekeeping)
     sah = False
     for daerah, senarai in KAWASAN_PICKUP_DIBENARKAN["selangor"].items():
         if lokasi_ambil in senarai:
@@ -151,10 +136,8 @@ def kira_harga_bas(lokasi_ambil, lokasi_hantar, jarak_km):
     if not sah:
         return "❌ Maaf, kawasan pickup anda adalah TIDAK DIBENARKAN mengikut peraturan ketat syarikat."
 
-    # 3. Ambil Harga Asas Minimum berdasarkan mukim pickup
-    harga_asas = HARGA_ASAS_PICKUP.get(lokasi_ambil, 700) # Default ke 700 jika tidak ditemui
+    harga_asas = HARGA_ASAS_PICKUP.get(lokasi_ambil, 700)
     
-    # 4. Logik Pengiraan Harga Jarak (30km pertama, >31km tambah RM 12.00/km)
     if jarak_km <= 30:
         jumlah_harga = harga_asas
     else:
@@ -164,10 +147,8 @@ def kira_harga_bas(lokasi_ambil, lokasi_hantar, jarak_km):
     return f"✅ Anggaran Harga Bas (44 Seat): RM {jumlah_harga:.2f} (Pickup: {lokasi_ambil.title()}, Jarak: {jarak_km}km)"
 
 def proses_mesej(user, text):
-    msg = text.lower()
     return "Sila hantarkan pertanyaan atau gunakan format tempahan yang disediakan."
 
-[cite: 1]
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET": return request.args.get("hub.challenge")
