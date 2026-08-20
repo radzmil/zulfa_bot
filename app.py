@@ -89,12 +89,14 @@ def tanya_gemini(text):
         prompt = f"""
         Awak adalah Zulfa, staf khidmat pelanggan rasmi untuk syarikat {COMPANY} (Shahril Basri Leisure Enterprise).
         Gaya bahasa awk: Mesra, ramah, guna bahasa Melayu santai (awk, kitorang, tau, etc.).
-        Syarikat kita menyediakan perkhidmatan sewaan MPV, Van, dan Bas Persiaran sahaja.
+        Syarikat kita HANYA menyediakan perkhidmatan sewaan MPV, Van, dan Bas Persiaran sahaja.
         PENTING: Jangan sekali-kali bagi sebarang link luar.
         
         Mesej daripada pelanggan: "{text}"
         
-        Jawab ringkas dan mesra sahaja.
+        Jika pelanggan bertanya pasal sewa bot, motosikal, lori, atau benda lain yang KITORANG TAK ADA, tolak secara baik dan mesra, beritahu kitorang hanya ada MPV, Van, dan Bas Persiaran. JANGAN HANTAR BORANG.
+        
+        Jika pelanggan bertanya pasal sewa MPV, Van, Bas, atau kenderaan kitorang, balas dengan mesra.
         """
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         res = requests.post(url, json=payload, headers=headers)
@@ -111,6 +113,7 @@ def tanya_gemini(text):
 def proses_mesej(user, text):
     msg = text.lower()
 
+    # Jika pelanggan hantar borang yang telah diisi
     if "borang maklumat sewaan" in msg or "pick-up point" in msg or "drop-off point" in msg or "syarikat :" in msg:
         simpan_data(user, text)
         if ADMIN:
@@ -136,14 +139,20 @@ def proses_mesej(user, text):
             hantar(ADMIN, f"🔔 *SEMAKAN BAYARAN*\nPelanggan: {user}\nBalas 'done {user}' jika sah.")
         return "Baik awk! Terima kasih. Saya sedang semak dengan admin. Tunggu sebentar ya! 🙏"
 
-    if any(k in msg for k in ["sewa", "harga", "nak", "van", "bas", "mpv", "booking", "tanya"]):
+    # Hanya beri borang jika mesej jelas menyentuh kenderaan yang kitorang ada (mpv, van, bas, sewa, harga, nak sewa)
+    kenderaan_sedia_ada = ["mpv", "van", "bas", "bus", "persiaran"]
+    ada_kaitan_kenderaan = any(k in msg for k in kenderaan_sedia_ada)
+    
+    # Jika pelanggan kata "nak sewa" tapi tak sebut bot/moto, atau sebut kenderaan kitorang
+    if ada_kaitan_kenderaan or ("nak sewa" in msg and not any(x in msg for x in ["bot", "moto", "motosikal", "lori", "kereta"]));
         return BORANG_TEMPLATE
 
+    # Kalau tanya benda lain (macam sewa bot, dsb), biar AI Gemini handle untuk tolak dengan baik
     jawapan_ai = tanya_gemini(text)
     if jawapan_ai:
         return jawapan_ai
 
-    return BORANG_TEMPLATE
+    return "Ada apa-apa lagi yang Zulfa boleh bantu untuk sewaan MPV, Van, atau Bas persiaran kitorang? 😊"
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
@@ -163,8 +172,6 @@ def webhook():
     print(f"Incoming Webhook Data: {data}")
     try:
         value = data["entry"][0]["changes"][0]["value"]
-        
-        # Pastikan webhook yang masuk mengandungi mesej teks sebenar daripada pengguna
         if "messages" in value:
             msg = value["messages"][0]
             user, body = msg["from"], msg["text"]["body"]
@@ -175,8 +182,7 @@ def webhook():
             else:
                 hantar(user, proses_mesej(user, body))
         else:
-            print("Webhook bukan mesej teks (mungkin status delivery/read). Diabaikan.")
-            
+            print("Webhook bukan mesej teks. Diabaikan.")
     except Exception as e:
         print(f"WEBHOOK ERROR KRONIK: {e}")
         traceback.print_exc()
