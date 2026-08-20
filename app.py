@@ -77,12 +77,10 @@ TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 ADMIN = os.getenv("GROUP_ADMIN_NUMBER")
 QR_IMAGE_URL = os.getenv("QR_IMAGE_URL", "")
-TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
+TOYYIBPAY_LINK = os.getenv("TOYYIB_PAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
 SALES_WHATSAPP_LINK = os.getenv("SALES_WHATSAPP_LINK", "https://wa.link/o3z1bz")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Storan sesi dan data pelanggan mengikut nombor unik
-SESSION_STATE = {}
 DATA_CUSTOMER_FILE = "data_customers.json"
 
 def muat_data_customer():
@@ -106,35 +104,6 @@ def simpan_info_pelanggan(user, mesej_baru):
     all_data[user]["history"].append(mesej_baru)
     simpan_data_customer(all_data)
 
-# --------------------------------------------------
-# SENARAI KAWASAN PICKUP YANG DIBENARKAN (GATEKEEPING)
-# --------------------------------------------------
-KAWASAN_PICKUP_DIBENARKAN = {
-    "selangor": {
-        "petaling": ["bukit raja", "damansara", "petaling", "sungai buloh"],
-        "hulu langat": ["ampang", "beranang", "cheras", "hulu langat", "kajang", "semenyih"],
-        "klang": ["kapar", "klang"],
-        "gombak": ["ampang", "batu", "rawang", "setapak", "ulu kelang"],
-        "kuala langat": ["bandar", "batu", "jugra", "kelanang", "morib", "tanjong duabelas", "telok panglima garang"],
-        "kuala selangor": ["api-api", "batang berjuntai", "bestari jaya", "ijok", "jeram", "kuala selangor", "pasangan", "tanjong karang", "ujong pematang", "ulu tinggi"],
-        "sepang": ["dengkil", "labu", "sepang"],
-        "sabak bernam": ["bagan nakhoda omar", "panchang bedena", "pasiran panjang", "sabak", "sungai panjang"],
-        "hulu selangor": ["ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam"]
-    },
-    "kuala lumpur": [
-        "kuala lumpur", "batu", "setapak", "ampang", "ulu kelang"
-    ],
-    "lain_lain": ["klia", "cyberjaya", "putrajaya"]
-}
-
-HARGA_ASAS_PICKUP = {
-    "bukit raja": 900, "sungai buloh": 900, "damansara": 800, "petaling": 800,
-    "ampang": 700, "cheras": 700, "ulu langat": 700, "beranang": 900,
-    "kajang": 800, "semenyih": 800, "kapar": 900, "klang": 900,
-    "batu": 700, "setapak": 700, "ulu kelang": 700, "rawang": 800,
-    "dengkil": 800, "labu": 800, "sepang": 800
-}
-
 def hantar(to, msg, type="text", image_url=None):
     url = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"
     payload = {"messaging_product": "whatsapp", "to": to, "type": type}
@@ -144,36 +113,53 @@ def hantar(to, msg, type="text", image_url=None):
 
 def tanya_ai_seperti_manusia(user, text):
     if not GEMINI_API_KEY:
-        return f"Hai, terima kasih kerana menghubungi {COMPANY_PROFILE['commercial_name']}[cite: 1, 2]. Ada apa yang boleh kami bantu hari ini?"
+        return "Hai! Maaf ya, sistem tengah ada hal sikit. Ada apa yang boleh saya bantu untuk urusan sewaan bas atau kenderaan hari ni?"
     
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         
+        # Arahan ketat agar AI bercakap betul-betul seperti manusia sebenar (natural, mesra, bahasa Malaysia santai)
         system_instruction = (
-            f"Anda adalah pembantu khidmat pelanggan rasmi bagi syarikat {COMPANY_PROFILE['commercial_name']} "
-            f"({COMPANY_PROFILE['legal_name']})[cite: 1, 2]. Gaya bahasa anda ramah, profesional, bertutur mesra seperti manusia biasa (friendly), "
-            f"menggunakan bahasa Melayu harian yang santai tetapi sopan. Syarikat menyediakan perkhidmatan sewaan bas persiaran, "
-            f"van, MPV (Vellfire, Innova), dan lori logistik untuk seluruh Semenanjung Malaysia, Singapura, dan Thailand[cite: 1, 2]. "
-            f"Jawab pertanyaan pelanggan dengan membantu, memberikan maklumat tepat berdasarkan profil syarikat, dan sentiasa galakkan mereka untuk berurusan."
+            "Anda adalah manusia sebenar yang bertindak sebagai pegawai khidmat pelanggan bagi syarikat "
+            "SB Leisure Transportation (Shahril Basri Leisure Enterprise). "
+            "PENTING: Jangan sekali-kali bercakap macam robot, jangan guna skrip meleret-leret yang kaku. "
+            "Gunakan gaya bahasa Melayu harian yang santai, mesra, ramah (friendly), kadang-kadang boleh guna singkatan "
+            "yang biasa rakyat Malaysia pakai (contoh: 'ok', 'boleh', 'takpe', 'tau') tapi tetap sopan dan profesional. "
+            "Syarikat kita sediakan perkhidmatan sewaan bas persiaran, van, MPV (Vellfire/Innova), dan lori logistik "
+            "untuk seluruh Semenanjung Malaysia, Singapura, dan Thailand. "
+            "Tugas anda adalah bersembang dan melayan pelanggan macam kawan atau staf kaunter yang mesra. "
+            "Kalau pelanggan tanya harga atau lokasi, jawab terus terang dengan bijak dan tanya details yang perlu (macam tarikh, tempat ambil, dsb) secara santai."
         )
         
-        payload = {
-            "contents": [
-                {"parts": [{"text": system_instruction}, {"text": f"Pelanggan berkata: {text}"}]}
-            ]
-        }
+        # Ambil sejarah perbualan lepas pelanggan ni kalau ada (supaya AI ingat konteks)
+        all_data = muat_data_customer()
+        chat_history = []
+        if user in all_data and "history" in all_data[user]:
+            # Ambil 5 mesej terakhir untuk jimatkan token dan kekalkan konteks
+            chat_history = all_data[user]["history"][-5:]
+
+        contents = [{"parts": [{"text": system_instruction}]}]
+        
+        # Masukkan sejarah perbualan supaya AI betul-betul kenal pelanggan ni
+        for h in chat_history:
+            role_text = "Pelanggan" if h["sender"] == "customer" else "Anda"
+            contents.append({"parts": [{"text": f"{role_text}: {h['message']}"}]})
+            
+        contents.append({"parts": [{"text": f"Pelanggan terkini berkata: {text}"}]})
+
+        payload = {"contents": contents}
         
         res = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
         response_data = res.json()
         return response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception as e:
-        return f"Maaf, sistem sedang sibuk sebentar. Sila ajukan pertanyaan anda kepada wakil jualan kami di {COMPANY_PROFILE['contacts'][0]}."
+        return "Eh, line internet saya macam terputus sekejap tadi. Boleh ulang semula tak soalan awak?"
 
 def proses_mesej(user, text):
-    # Simpan mesej masuk pelanggan ke dalam fail data berasingan mengikut nombor unik
+    # Simpan mesej masuk pelanggan
     simpan_info_pelanggan(user, {"sender": "customer", "message": text})
     
-    # Gunakan AI untuk respons seperti manusia
+    # Dapatkan jawapan manusia jadi-jadian daripada AI
     balasan_ai = tanya_ai_seperti_manusia(user, text)
     
     # Simpan respons bot
@@ -208,7 +194,6 @@ def webhook():
         user = data["entry"][0]["changes"][0]["value"]["messages"][0]["from"]
         body = data["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"]
         
-        # Proses mesej secara unik untuk setiap pelanggan & hantar respons
         balasan = proses_mesej(user, body)
         hantar(user, balasan)
     except Exception as e:
