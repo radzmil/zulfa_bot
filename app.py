@@ -19,21 +19,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 SESSION_STATE = {}
 
 BORANG_ONE_WAY = (
-    "📝 *BORANG MAKLUMAT SEWAAN*\n\n"
-    "Jenis Trip (One Way / Two Way) : \n"
-    "Syarikat : \n"
-    "Nama : \n"
-    "No. tel : \n"
-    "Tarikh & Masa (Pergi) : \n"
-    "Pick-up point : \n"
-    "Drop-off point : \n"
-    "Pax : \n"
-    "Jenis Kenderaan (MPV/Van/Bas) : \n"
-)
-
-BORANG_TWO_WAY = (
-    "📝 *BORANG MAKLUMAT SEWAAN*\n\n"
-    "Jenis Trip (One Way / Two Way) : \n"
+    "📝 *BORANG MAKLUMAT SEWAAN (ONE WAY)*\n\n"
+    "Jenis Trip (One Way / Two Way) : One Way\n"
     "Syarikat : \n"
     "Nama : \n"
     "No. tel : \n"
@@ -42,11 +29,26 @@ BORANG_TWO_WAY = (
     "Drop-off point : \n"
     "Pax : \n"
     "Jenis Kenderaan (MPV/Van/Bas) : \n\n"
-    "🔄 *Maklumat Return Trip (Isi jika TWO WAY sahaja) :-\n"
+    "📌 *Sila lengkapkan semua butiran di atas.*"
+)
+
+BORANG_TWO_WAY = (
+    "📝 *BORANG MAKLUMAT SEWAAN (TWO WAY)*\n\n"
+    "Jenis Trip (One Way / Two Way) : Two Way\n"
+    "Syarikat : \n"
+    "Nama : \n"
+    "No. tel : \n"
+    "Tarikh & Masa (Pergi) : \n"
+    "Pick-up point : \n"
+    "Drop-off point : \n"
+    "Pax : \n"
+    "Jenis Kenderaan (MPV/Van/Bas) : \n\n"
+    "🔄 *Maklumat Return Trip :-*\n"
     "Tarikh & Masa (Balik) : \n"
     "Pick-up point : \n"
     "Drop-off point : \n"
-    "Pax : *"
+    "Pax : \n\n"
+    "📌 *Sila lengkapkan semua butiran di atas.*"
 )
 
 def hantar(to, msg, type="text", image_url=None):
@@ -55,6 +57,21 @@ def hantar(to, msg, type="text", image_url=None):
     if type == "text": payload["text"] = {"body": msg}
     elif type == "image": payload["image"] = {"link": image_url, "caption": msg}
     requests.post(url, json=payload, headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"})
+
+def semak_borang_lengkap(text_borang):
+    if not GEMINI_API_KEY: return "LENGKAP"
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
+        prompt = f"""
+        Periksa teks ini. Adakah pelanggan telah mengisi maklumat borang sewaan ini dengan lengkap (nama, no telefon, tarikh, pick-up, drop-off, pax, jenis kenderaan)?
+        Jika masih ada ruangan kosong, tandatangan kosong, atau hanya hantar templat kosong, balas: TIDAK_LENGKAP.
+        Jika sudah diisi dengan maklumat sebenar, balas: LENGKAP.
+        
+        Teks: "{text_borang}"
+        """
+        res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, headers={"Content-Type": "application/json"})
+        return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
+    except: return "LENGKAP"
 
 def kira_harga_sewaan(text_borang):
     if not GEMINI_API_KEY: return "RM 350 - RM 600"
@@ -68,46 +85,53 @@ def kira_harga_sewaan(text_borang):
 def proses_mesej(user, text):
     msg = text.lower()
     
-    # 1. Pilihan Jenis Trip
+    # 1. Pilihan Jenis Trip (Tanpa Nombor)
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_jenis_trip":
-        if any(k in msg for k in ["one", "1", "sehala"]):
+        if any(k in msg for k in ["one way", "one", "sehala"]):
             SESSION_STATE[user].update({"status": "tunggu_borang", "trip_type": "One Way"})
-            return f"Sila lengkapkan borang tempahan berikut:\n\n{BORANG_ONE_WAY}"
-        elif any(k in msg for k in ["two", "2", "balik"]):
+            return f"Sila lengkapkan borang ini:\n\n{BORANG_ONE_WAY}"
+        elif any(k in msg for k in ["two way", "two", "balik", "pergi balik"]):
             SESSION_STATE[user].update({"status": "tunggu_borang", "trip_type": "Two Way"})
-            return f"Sila lengkapkan borang tempahan berikut:\n\n{BORANG_TWO_WAY}"
-        return "Sila balas 1 untuk *One Way* atau 2 untuk *Two Way*."
+            return f"Sila lengkapkan borang ini:\n\n{BORANG_TWO_WAY}"
+        return "Sila beritahu sama ada anda ingin buat tempahan untuk *One Way* atau *Two Way*."
 
-    # 2. Pilihan Bayaran
+    # 2. Pilihan Bayaran (Tanpa Nombor)
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_pilihan_bayar":
         borang_data = SESSION_STATE[user]["borang"]
         del SESSION_STATE[user]
-        if any(k in msg for k in ["qr", "qrcode"]):
+        if any(k in msg for k in ["qr", "qrcode", "duitnow"]):
             hantar(user, "Sila buat bayaran melalui DuitNow QR di bawah:", type="image", image_url=QR_IMAGE_URL)
-            if ADMIN: hantar(ADMIN, f"📋 *TEMPAHAN (QR)*\n{borang_data}")
-            return "Sila hantar resit di sini ya. Terima kasih!"
-        elif any(k in msg for k in ["online", "bank"]):
-            if ADMIN: hantar(ADMIN, f"📋 *TEMPAHAN (Online)*\n{borang_data}")
-            return f"Sila buat bayaran melalui link ini:\n{TOYYIBPAY_LINK}\n\nSila hantar resit di sini. Terima kasih!"
-        return "Sila pilih kaedah pembayaran: *QR Code* atau *Online Banking*."
+            if ADMIN: hantar(ADMIN, f"📋 *TEMPAHAN SAH (QR)*\n\n{borang_data}")
+            return "Sila hantar resit di sini selepas selesai bayar. Terima kasih! 🙏"
+        elif any(k in msg for k in ["online", "banking", "toyyibpay", "bank"]):
+            if ADMIN: hantar(ADMIN, f"📋 *TEMPAHAN SAH (Online Banking)*\n\n{borang_data}")
+            return f"Sila buat bayaran melalui pautan berikut:\n{TOYYIBPAY_LINK}\n\nSila hantar resit di sini selepas selesai bayar. Terima kasih! 🙏"
+        return "Adakah anda ingin buat pembayaran melalui *QR Code* atau *Online Banking*?"
 
     # 3. Persetujuan Harga
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_persetujuan":
-        if any(k in msg for k in ["setuju", "ok"]):
+        if any(k in msg for k in ["setuju", "ok", "proceed", "terus", "ya"]):
             SESSION_STATE[user]["status"] = "tunggu_pilihan_bayar"
-            return "Sila pilih kaedah pembayaran:\n1. *QR Code*\n2. *Online Banking*"
+            return "Adakah anda ingin buat bayaran melalui *QR Code* atau *Online Banking*?"
         del SESSION_STATE[user]
-        return "Tempahan dibatalkan."
+        return f"Tempahan dibatalkan. Sila hubungi pihak sales jika ada sebarang pertanyaan: {SALES_WHATSAPP_LINK}"
 
-    # 4. Input Borang
+    # 4. Semak Borang Wajib Lengkap
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_borang":
+        status_semakan = semak_borang_lengkap(text)
+        if "TIDAK_LENGKAP" in status_semakan:
+            trip_jenis = SESSION_STATE[user].get("trip_type", "One Way")
+            template_pilihan = BORANG_ONE_WAY if trip_jenis == "One Way" else BORANG_TWO_WAY
+            return f"⚠️ Maaf, borang anda kelihatan belum lengkap diisi. Sila lengkapkan semua butiran berikut:\n\n{template_pilihan}"
+        
+        # Jika lengkap, teruskan kira harga
         anggaran = kira_harga_sewaan(text)
         SESSION_STATE[user].update({"status": "tunggu_persetujuan", "borang": text})
-        return f"📊 *Anggaran Harga:* {anggaran}\n\nAdakah anda bersetuju? Balas 'Setuju' untuk teruskan."
+        return f"📊 *Anggaran Sebut Harga:* {anggaran}\n\nAdakah anda bersetuju dengan harga ini? Sila balas *Setuju* untuk meneruskan pembayaran."
 
     # Default: Mula
     SESSION_STATE[user] = {"status": "tunggu_jenis_trip"}
-    return "Selamat datang ke *SHAHRIL BASRI LEISURE ENTERPRISE*.\nNak sewa kenderaan untuk trip jenis apa?\n1. *One Way*\n2. *Two Way*"
+    return f"Selamat datang ke *{COMPANY}*.\nAdakah anda ingin tempah kenderaan untuk *One Way* (Sehala) atau *Two Way* (Pergi-Balik)?"
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
