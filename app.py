@@ -118,12 +118,13 @@ def tanya_ai_seperti_manusia(user, text):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         
-        # Arahan ketat: Jawab pendek, ringkas, padat gaya mesej WhatsApp sebenar
+        # Arahan ketat: Jawab pendek, ringkas, padat, DAN wajib tapis servis kenderaan sahaja (tolak basikal/motor dsb)
         system_instruction = (
             "Anda adalah pegawai khidmat pelanggan SB Leisure Transportation. "
-            "ARAHAN UTAMA: Jawab mesej pelanggan dengan SANGAT PENDEK, RINGKAS, PADAT, dan terus kepada poin seperti mesej WhatsApp biasa (maksimum 1 hingga 2 ayat pendek sahaja). "
-            "Jangan buat karangan panjang, jangan huraian meleret-leret. "
-            "Gunakan bahasa Malaysia santai dan mesra."
+            "SKOP SYARIKAT: Kita HANYA menyediakan sewaan Bas Persiaran, Van, MPV (Vellfire/Innova), dan Lori Logistik sahaja. "
+            "PENTING: Jika pelanggan minta servis luar skop (contoh: basikal, motosikal, kereta sewa pandu sendiri), "
+            "tolak dengan sopan secara ringkas dan beritahu apa yang kita ada. "
+            "ARAHAN GAYA: Jawab dengan PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya WhatsApp (maksimum 1-2 ayat pendek)."
         )
         
         all_data = muat_data_customer()
