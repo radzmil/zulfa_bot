@@ -85,20 +85,31 @@ def proses_mesej(user, text):
     if any(k in msg for k in ["bot", "speed boat", "lori", "moto", "kereta"]):
         return f"Maaf, {COMPANY} hanya menyediakan perkhidmatan sewaan MPV, Van, dan Bas Persiaran sahaja."
 
+    # 3. Status Memilih Kaedah Pembayaran (QR atau Online Banking)
+    if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_pilihan_bayar":
+        borang_data = SESSION_STATE[user]["borang"]
+        del SESSION_STATE[user]
+        
+        if any(k in msg for k in ["qr", "qrcode", "duitnow"]):
+            hantar(user, "Sila buat bayaran melalui DuitNow QR di bawah:", type="image", image_url=QR_IMAGE_URL)
+            if ADMIN: hantar(ADMIN, f"📋 *TEMPAHAN SAH (QR)*\nDari: {user}\n\n{borang_data}")
+            return "Dah siap bayar, sila hantar resit di sini ya. 🙏"
+        elif any(k in msg for k in ["online", "banking", "toyyibpay", "bank"]):
+            if ADMIN: hantar(ADMIN, f"📋 *TEMPAHAN SAH (Online Banking)*\nDari: {user}\n\n{borang_data}")
+            return f"Sila buat pembayaran melalui pautan ToyyibPay / Online Banking berikut:\n{TOYYIBPAY_LINK}\n\nDah siap bayar, sila hantar resit di sini ya. 🙏"
+        else:
+            return "Sila pilih sama ada nak bayar guna *QR Code* atau *Online Banking* ya."
+
     # 2. Status Menunggu Persetujuan Harga
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_persetujuan":
         if any(k in msg for k in ["setuju", "ok", "proceed", "terus"]):
-            borang_data = SESSION_STATE[user]["borang"]
-            del SESSION_STATE[user]
-            hantar(user, f"Maklumat Pembayaran DuitNow QR / ToyyibPay:\nBank: {BANK_INFO['bank']}\nNo Akaun: {BANK_INFO['no_akaun']}\nLink: {TOYYIBPAY_LINK}", type="image", image_url=QR_IMAGE_URL)
-            if ADMIN:
-                hantar(ADMIN, f"📋 *TEMPAHAN SAH & DIPERSETUJUI*\nDari: {user}\n\n{borang_data}")
-            return "Sila buat bayaran deposit/penuh dan hantar resit di sini."
+            SESSION_STATE[user]["status"] = "tunggu_pilihan_bayar"
+            return "Baik! Untuk pembayaran, adakah anda ingin buat bayaran melalui:\n1. *QR Code* (DuitNow QR)\n2. *Online Banking* (ToyyibPay)\n\nSila balas pilihan anda."
         else:
             del SESSION_STATE[user]
-            return f"Tempahan dibatalkan atau tidak disetujui. Sila hubungi sales: {SALES_WHATSAPP_LINK}"
+            return f"Tempahan dibatalkan. Sila hubungi sales jika ada sebarang pertanyaan: {SALES_WHATSAPP_LINK}"
 
-    # 3. Penerimaan & Semakan Borang
+    # 4. Penerimaan & Semakan Borang
     if "borang" in msg or "pick-up" in msg or "drop-off" in msg or "one way" in msg or "two way" in msg:
         status_sop = semak_sop_borang(text)
         
@@ -110,7 +121,7 @@ def proses_mesej(user, text):
         # Kira Harga & Simpan State
         anggaran = kira_harga_sewaan(text)
         SESSION_STATE[user] = {"borang": text, "status": "tunggu_persetujuan"}
-        return f"📊 Anggaran Sebut Harga: {anggaran}\n\nAdakah anda bersetuju dengan harga ini? Sila balas 'Setuju' untuk mendapatkan maklumat pembayaran."
+        return f"📊 Anggaran Sebut Harga: {anggaran}\n\nAdakah anda bersetuju dengan harga ini? Sila balas 'Setuju' untuk meneruskan langkah pembayaran."
 
     # Default jika bukan borang: Minta borang
     return f"Sila lengkapkan borang tempahan berikut untuk memulakan pengiraan harga:\n\n{BORANG_TEMPLATE}"
