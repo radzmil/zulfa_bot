@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -78,10 +79,32 @@ ADMIN = os.getenv("GROUP_ADMIN_NUMBER")
 QR_IMAGE_URL = os.getenv("QR_IMAGE_URL", "")
 TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
 SALES_WHATSAPP_LINK = os.getenv("SALES_WHATSAPP_LINK", "https://wa.link/o3z1bz")
-COMPANY = COMPANY_PROFILE["legal_name"]
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# Storan sesi dan data pelanggan mengikut nombor unik
 SESSION_STATE = {}
+DATA_CUSTOMER_FILE = "data_customers.json"
+
+def muat_data_customer():
+    if os.path.exists(DATA_CUSTOMER_FILE):
+        try:
+            with open(DATA_CUSTOMER_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def simpan_data_customer(data):
+    with open(DATA_CUSTOMER_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
+
+def simpan_info_pelanggan(user, mesej_baru):
+    all_data = muat_data_customer()
+    if user not in all_data:
+        all_data[user] = {"history": [], "details": {}}
+    
+    all_data[user]["history"].append(mesej_baru)
+    simpan_data_customer(all_data)
 
 # --------------------------------------------------
 # SENARAI KAWASAN PICKUP YANG DIBENARKAN (GATEKEEPING)
@@ -104,40 +127,13 @@ KAWASAN_PICKUP_DIBENARKAN = {
     "lain_lain": ["klia", "cyberjaya", "putrajaya"]
 }
 
-# --------------------------------------------------
-# SENARAI KADAR HARGA ASAS MENGIKUT MUKIM / KAWASAN PICKUP
-# --------------------------------------------------
 HARGA_ASAS_PICKUP = {
-    "bukit raja": 900, "sungai buloh": 900,
-    "damansara": 800, "petaling": 800,
-    "ampang": 700, "cheras": 700, "ulu langat": 700,
-    "beranang": 900,
-    "kajang": 800, "semenyih": 800,
-    "kapar": 900, "klang": 900,
+    "bukit raja": 900, "sungai buloh": 900, "damansara": 800, "petaling": 800,
+    "ampang": 700, "cheras": 700, "ulu langat": 700, "beranang": 900,
+    "kajang": 800, "semenyih": 800, "kapar": 900, "klang": 900,
     "batu": 700, "setapak": 700, "ulu kelang": 700, "rawang": 800,
-    "bandar": 1000, "jugra": 1000, "kelanang": 1000, "morib": 1000, "tanjong duabelas": 1000, "telok panglima garang": 1000,
-    "api-api": 1200, "batang berjuntai": 1200, "bestari jaya": 1200, "ijok": 1200, "jeram": 1200, "kuala selangor": 1200, "pasangan": 1200, "tanjong karang": 1200, "ujong pematang": 1200, "ulu tinggi": 1200,
-    "dengkil": 800, "labu": 800, "sepang": 800,
-    "bagan nakhoda omar": 1200, "panchang bedena": 1200, "pasiran panjang": 1200, "sabak": 1200, "sungai panjang": 1200,
-    "ampang pecah": 1000, "batang kali": 1000, "buloh telor": 1000, "kalumpang": 1000, "kerling": 1000, "kuala kalumpang": 1000, "peretak": 1000, "rasa": 1000, "serendah": 1000, "sungai gumut": 1000, "sungai tinggi": 1000, "ulu bernam": 1000, "ulu yam": 1000,
-    "ampangan": 1200, "lenggeng": 1200, "pantai": 1200, "rantau": 1200, "rasah": 1200, "seremban": 1200, "setul": 1200,
-    "jimah": 1200, "linggi": 1200, "port dickson": 1200, "si rusa": 1200,
-    "batu kikir": 1400, "chembong": 1400, "gadong": 1400, "kota": 1400, "kundor": 1400, "legong hilir": 1400, "legong hulu": 1400, "mambau": 1400, "nerasau": 1400, "pedas": 1400, "pilin": 1400, "seberang": 1400, "titian bintangor": 1400, "batu hampar": 1400, "gadong hilir": 1400, "rembau bandar": 1400,
-    "ampang tinggi": 1400, "johol": 1400, "juasseh": 1400, "kepas": 1400, "kuala pilah": 1400, "langkap": 1400, "seri menanti": 1400, "ulu jempol": 1400, "terachi": 1400, "parit tinggi": 1400,
-    "glami lemi": 1400, "hulu klawang": 1400, "klawang": 1400, "pertang": 1400, "peradong": 1400, "kenaboi": 1400, "triang hilir": 1400, "ulu triang": 1400,
-    "jelai": 1600, "serting ilir": 1600, "serting hulu": 1600, "palong": 1600,
-    "ayer kuning": 1600, "gemencheh": 1600, "gemas": 1600, "kepis": 1600, "ladang": 1600, "tampin tengah": 1600, "tampin": 1600
+    "dengkil": 800, "labu": 800, "sepang": 800
 }
-
-BORANG_MAKLUMAT = (
-    "📝 *BORANG MAKLUMAT SEWAAN*\n\n"
-    "Tarikh: \n"
-    "Masa: \n"
-    "Lokasi Ambil: \n"
-    "Lokasi Hantar: \n"
-    "Jumlah Penumpang: \n\n"
-    "📌 *Sila lengkapkan semua butiran di atas.*"
-)
 
 def hantar(to, msg, type="text", image_url=None):
     url = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"
@@ -146,73 +142,44 @@ def hantar(to, msg, type="text", image_url=None):
     elif type == "image": payload["image"] = {"link": image_url, "caption": msg}
     requests.post(url, json=payload, headers={"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"})
 
-def semak_borang_lengkap(text_borang):
-    if not GEMINI_API_KEY: return "LENGKAP"
+def tanya_ai_seperti_manusia(user, text):
+    if not GEMINI_API_KEY:
+        return f"Hai, terima kasih kerana menghubungi {COMPANY_PROFILE['commercial_name']}[cite: 1, 2]. Ada apa yang boleh kami bantu hari ini?"
+    
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
-        prompt = f"""
-        Periksa teks ini. Adakah pelanggan telah mengisi maklumat borang sewaan ini dengan lengkap (Tarikh, Masa, Lokasi Ambil, Lokasi Hantar, Jumlah Penumpang)?
-        Jika masih ada ruangan kosong, balas: TIDAK_LENGKAP.
-        Jika sudah diisi, balas: LENGKAP.
         
-        Teks: "{text_borang}"
-        """
-        res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, headers={"Content-Type": "application/json"})
-        return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
-    except: return "LENGKAP"
-
-def muat_data_harga_fail(nama_fail="harga_bas.txt"):
-    senarai_harga = {}
-    if os.path.exists(nama_fail):
-        with open(nama_fail, "r", encoding="utf-8") as f:
-            for baris in f:
-                if not baris.strip() or baris.startswith("#"):
-                    continue
-                data = baris.strip().split("|")
-                if len(data) == 3:
-                    ambil = data[0].strip().lower()
-                    hantar_lokasi = data[1].strip().lower()
-                    try:
-                        harga = float(data[2].strip())
-                        senarai_harga[(ambil, hantar_lokasi)] = harga
-                    except ValueError:
-                        continue
-    return senarai_harga
-
-def kira_harga_bas(lokasi_ambil, lokasi_hantar, jarak_km):
-    lokasi_ambil = lokasi_ambil.strip().lower()
-    lokasi_hantar = lokasi_hantar.strip().lower()
-    
-    data_fail = muat_data_harga_fail("harga_bas.txt")
-    if (lokasi_ambil, lokasi_hantar) in data_fail:
-        harga_tetap = data_fail[(lokasi_ambil, lokasi_hantar)]
-        return f"✅ Anggaran Harga Bas (44 Seat): RM {harga_tetap:.2f} (Sumber: Harga Tetap Fail | Pickup: {lokasi_ambil.title()} ke {lokasi_hantar.title()})"
-
-    sah = False
-    for daerah, senarai in KAWASAN_PICKUP_DIBENARKAN["selangor"].items():
-        if lokasi_ambil in senarai:
-            sah = True
-            break
-    if not sah and lokasi_ambil in KAWASAN_PICKUP_DIBENARKAN["kuala lumpur"]:
-        sah = True
-    if not sah and lokasi_ambil in KAWASAN_PICKUP_DIBENARKAN["lain_lain"]:
-        sah = True
+        system_instruction = (
+            f"Anda adalah pembantu khidmat pelanggan rasmi bagi syarikat {COMPANY_PROFILE['commercial_name']} "
+            f"({COMPANY_PROFILE['legal_name']})[cite: 1, 2]. Gaya bahasa anda ramah, profesional, bertutur mesra seperti manusia biasa (friendly), "
+            f"menggunakan bahasa Melayu harian yang santai tetapi sopan. Syarikat menyediakan perkhidmatan sewaan bas persiaran, "
+            f"van, MPV (Vellfire, Innova), dan lori logistik untuk seluruh Semenanjung Malaysia, Singapura, dan Thailand[cite: 1, 2]. "
+            f"Jawab pertanyaan pelanggan dengan membantu, memberikan maklumat tepat berdasarkan profil syarikat, dan sentiasa galakkan mereka untuk berurusan."
+        )
         
-    if not sah:
-        return "❌ Maaf, kawasan pickup anda adalah TIDAK DIBENARKAN mengikut peraturan ketat syarikat."
-
-    harga_asas = HARGA_ASAS_PICKUP.get(lokasi_ambil, 700)
-    
-    if jarak_km <= 30:
-        jumlah_harga = harga_asas
-    else:
-        jarak_lebihan = jarak_km - 30
-        jumlah_harga = harga_asas + (jarak_lebihan * 12.00)
+        payload = {
+            "contents": [
+                {"parts": [{"text": system_instruction}, {"text": f"Pelanggan berkata: {text}"}]}
+            ]
+        }
         
-    return f"✅ Anggaran Harga Bas (44 Seat): RM {jumlah_harga:.2f} (Pickup: {lokasi_ambil.title()}, Jarak: {jarak_km}km)"
+        res = requests.post(url, json=payload, headers={"Content-Type": "application/json"})
+        response_data = res.json()
+        return response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as e:
+        return f"Maaf, sistem sedang sibuk sebentar. Sila ajukan pertanyaan anda kepada wakil jualan kami di {COMPANY_PROFILE['contacts'][0]}."
 
 def proses_mesej(user, text):
-    return "Sila hantarkan pertanyaan atau gunakan format tempahan yang disediakan."
+    # Simpan mesej masuk pelanggan ke dalam fail data berasingan mengikut nombor unik
+    simpan_info_pelanggan(user, {"sender": "customer", "message": text})
+    
+    # Gunakan AI untuk respons seperti manusia
+    balasan_ai = tanya_ai_seperti_manusia(user, text)
+    
+    # Simpan respons bot
+    simpan_info_pelanggan(user, {"sender": "bot", "message": balasan_ai})
+    
+    return balasan_ai
 
 @app.route("/")
 def home():
@@ -240,8 +207,12 @@ def webhook():
     try:
         user = data["entry"][0]["changes"][0]["value"]["messages"][0]["from"]
         body = data["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"]
-        hantar(user, proses_mesej(user, body))
-    except: pass
+        
+        # Proses mesej secara unik untuk setiap pelanggan & hantar respons
+        balasan = proses_mesej(user, body)
+        hantar(user, balasan)
+    except Exception as e:
+        pass
     return jsonify({"status": "success"}), 200
 
 if __name__ == "__main__": 
