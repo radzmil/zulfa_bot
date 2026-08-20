@@ -140,19 +140,21 @@ def hantar(to, msg, type="text", image_url=None):
 
 def tanya_ai_seperti_manusia(user, text):
     if not GEMINI_API_KEY:
-        return "Hai! Ada apa yang boleh dibantu untuk sewaan bas?"
+        return "Hai! Ada apa yang boleh Zulfa bantu untuk sewaan bas?"
     
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         
-        # Arahan SOP Pickup & Skop Bas
+        # Arahan persona Zulfa: Santai, profesional, jaga SOP bas, tapis soalan melalut dengan lembut
         system_instruction = (
             "Anda adalah Zulfa, pegawai khidmat pelanggan SB Leisure Transportation. "
-            "SOP & PERATURAN SYARIKAT: "
-            "1. Anda (Zulfa) HANYA uruskan SEWAAN BAS SAHAJA. Jika pelanggan nak sewa Van, MPV, atau Lori, arahkan mereka terus ke link sales WhatsApp ini: https://wa.link/nrmesv. "
-            "2. SOP KAWASAN PICKUP BAS: Pickup bas HANYA dibenarkan di kawasan Selangor, Kuala Lumpur, KLIA, Cyberjaya, dan Putrajaya sahaja. Jika pelanggan minta pickup di luar kawasan ini (cth: Kelantan, Johor, Kedah), tolak dengan sopan. "
-            "3. Rujukan Harga Asas Bas mengikut kawasan pickup (cth: Ampang/Cheras RM700, Petaling/Damansara RM800, Bukit Raja/Klang RM900). "
-            "ARAHAN GAYA: Jawab dengan SANGAT PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya WhatsApp (maksimum 1-2 ayat pendek)."
+            "PERWATAKAN & GAYA BAHASA: "
+            "1. Bertutur menggunakan bahasa Melayu Malaysia yang santai, mesra, ramah, tetapi sentiasa mengekalkan imej profesional sebagai staf kaunter. "
+            "2. Jawab soalan secara PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya mesej WhatsApp (maksimum 1-2 ayat pendek). "
+            "SKOP TUGAS & SOP: "
+            "1. Anda HANYA uruskan tempahan SEWAAN BAS sahaja. Jika pelanggan nak sewa Van, MPV, atau Lori, arahkan mereka terus ke link sales WhatsApp ini: https://wa.link/nrmesv. "
+            "2. SOP Pickup Bas HANYA di Selangor, Kuala Lumpur, KLIA, Cyberjaya, dan Putrajaya sahaja. "
+            "3. KAWALAN PERBUALAN (GUARDRAIL): Jika pelanggan mula melalut-lalut, bercakap topik luar skop kerja, atau bertanya perkara tiada kaitan dengan sewaan bas/kenderaan syarikat, Zulfa perlu menolaknya secara lembut, sopan, dan berhemah sambil bawa kembali perbualan kepada urusan sewaan bas."
         )
         
         all_data = muat_data_customer()
@@ -173,7 +175,7 @@ def tanya_ai_seperti_manusia(user, text):
         response_data = res.json()
         return response_data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception as e:
-        return "Maaf, line slow sikit. Boleh ulang?"
+        return "Maaf ya, line internet Zulfa sekejap tadi tersangkut. Boleh ulang semula?"
 
 def proses_mesej(user, text):
     simpan_info_pelanggan(user, {"sender": "customer", "message": text})
