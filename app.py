@@ -78,7 +78,7 @@ PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 ADMIN = os.getenv("GROUP_ADMIN_NUMBER")
 QR_IMAGE_URL = os.getenv("QR_IMAGE_URL", "")
 TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
-SALES_WHATSAPP_LINK = os.getenv("SALES_WHATSAPP_LINK", "https://wa.link/o3z1bz")
+SALES_WHATSAPP_LINK = "https://wa.link/nrmesv"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 DATA_CUSTOMER_FILE = "data_customers.json"
@@ -113,18 +113,19 @@ def hantar(to, msg, type="text", image_url=None):
 
 def tanya_ai_seperti_manusia(user, text):
     if not GEMINI_API_KEY:
-        return "Hai! Ada apa yang boleh dibantu untuk sewaan kenderaan?"
+        return "Hai! Ada apa yang boleh dibantu untuk sewaan bas?"
     
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
         
-        # Arahan ketat: Jawab pendek, ringkas, padat, DAN wajib tapis servis kenderaan sahaja (tolak basikal/motor dsb)
+        # Arahan ketat mengenai pembahagian tugas sewaan
         system_instruction = (
-            "Anda adalah pegawai khidmat pelanggan SB Leisure Transportation. "
-            "SKOP SYARIKAT: Kita HANYA menyediakan sewaan Bas Persiaran, Van, MPV (Vellfire/Innova), dan Lori Logistik sahaja. "
-            "PENTING: Jika pelanggan minta servis luar skop (contoh: basikal, motosikal, kereta sewa pandu sendiri), "
-            "tolak dengan sopan secara ringkas dan beritahu apa yang kita ada. "
-            "ARAHAN GAYA: Jawab dengan PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya WhatsApp (maksimum 1-2 ayat pendek)."
+            "Anda adalah Zulfa, pegawai khidmat pelanggan bagi SB Leisure Transportation. "
+            "PERATURAN UTAMA SEWAAN KENDERAAN: "
+            "1. Anda (Zulfa) HANYA boleh melayan dan memproses tempahan untuk SEWAAN BAS sahaja. "
+            "2. Jika pelanggan mahu sewa Van, MPV (Vellfire/Innova), atau Lori, anda TIDAK BOLEH uruskan. Terus arahkan mereka berurusan dengan team sales melalui link WhatsApp rasmi ini: https://wa.link/nrmesv. "
+            "3. Jika pelanggan minta servis lain di luar skop (seperti basikal, motor, dll), tolak dengan sopan. "
+            "ARAHAN GAYA: Jawab dengan SANGAT PENDEK, RINGKAS, PADAT, dan terus kepada poin gaya WhatsApp biasa (maksimum 1-2 ayat pendek)."
         )
         
         all_data = muat_data_customer()
