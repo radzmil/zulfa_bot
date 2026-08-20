@@ -18,6 +18,13 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 SESSION_STATE = {}
 
+# Tetapan harga tetap mengikut kenderaan (Boleh ubah nilai RM di sini)
+KADAR_HARGA = {
+    "mpv": 250,
+    "van": 350,
+    "bas": 600
+}
+
 BORANG_ONE_WAY = (
     "📝 *BORANG MAKLUMAT SEWAAN (ONE WAY)*\n\n"
     "Jenis Trip (One Way / Two Way) : One Way\n"
@@ -73,19 +80,31 @@ def semak_borang_lengkap(text_borang):
         return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
     except: return "LENGKAP"
 
-def kira_harga_sewaan(text_borang):
-    if not GEMINI_API_KEY: return "RM 350 - RM 600"
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
-        prompt = f"Berdasarkan borang maklumat sewaan ini, berikan anggaran sebut harga kasar dalam RM: {text_borang}. Berikan jawapan harga pendek sahaja."
-        res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, headers={"Content-Type": "application/json"})
-        return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-    except: return "RM 350 - RM 600"
+def kira_harga_tetap(text_borang):
+    text_lower = text_borang.lower()
+    harga = 350 # Harga default jika jenis kenderaan tidak dijumpai
+    jenis_kenderaan = "Kenderaan"
+    
+    if "bas" in text_lower:
+        harga = KADAR_HARGA["bas"]
+        jenis_kenderaan = "Bas"
+    elif "van" in text_lower:
+        harga = KADAR_HARGA["van"]
+        jenis_kenderaan = "Van"
+    elif "mpv" in text_lower:
+        harga = KADAR_HARGA["mpv"]
+        jenis_kenderaan = "MPV"
+        
+    # Jika Two Way, gandakan harga (atau letak formula anda di sini)
+    if "two way" in text_lower or "pergi balik" in text_lower or "balik" in text_lower:
+        harga = harga * 2
+        
+    return f"RM {harga}", jenis_kenderaan
 
 def proses_mesej(user, text):
     msg = text.lower()
     
-    # 1. Pilihan Jenis Trip (Tanpa Nombor)
+    # 1. Pilihan Jenis Trip
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_jenis_trip":
         if any(k in msg for k in ["one way", "one", "sehala"]):
             SESSION_STATE[user].update({"status": "tunggu_borang", "trip_type": "One Way"})
@@ -95,7 +114,7 @@ def proses_mesej(user, text):
             return f"Sila lengkapkan borang ini:\n\n{BORANG_TWO_WAY}"
         return "Sila beritahu sama ada anda ingin buat tempahan untuk *One Way* atau *Two Way*."
 
-    # 2. Pilihan Bayaran (Tanpa Nombor)
+    # 2. Pilihan Bayaran
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_pilihan_bayar":
         borang_data = SESSION_STATE[user]["borang"]
         del SESSION_STATE[user]
@@ -116,7 +135,7 @@ def proses_mesej(user, text):
         del SESSION_STATE[user]
         return f"Tempahan dibatalkan. Sila hubungi pihak sales jika ada sebarang pertanyaan: {SALES_WHATSAPP_LINK}"
 
-    # 4. Semak Borang Wajib Lengkap
+    # 4. Semak Borang Wajib Lengkap & Kira Harga Tetap
     if user in SESSION_STATE and SESSION_STATE[user].get("status") == "tunggu_borang":
         status_semakan = semak_borang_lengkap(text)
         if "TIDAK_LENGKAP" in status_semakan:
@@ -124,10 +143,10 @@ def proses_mesej(user, text):
             template_pilihan = BORANG_ONE_WAY if trip_jenis == "One Way" else BORANG_TWO_WAY
             return f"⚠️ Maaf, borang anda kelihatan belum lengkap diisi. Sila lengkapkan semua butiran berikut:\n\n{template_pilihan}"
         
-        # Jika lengkap, teruskan kira harga
-        anggaran = kira_harga_sewaan(text)
+        # Kira harga tetap berasaskan jenis kenderaan
+        jumlah_harga, jenis_k = kira_harga_tetap(text)
         SESSION_STATE[user].update({"status": "tunggu_persetujuan", "borang": text})
-        return f"📊 *Anggaran Sebut Harga:* {anggaran}\n\nAdakah anda bersetuju dengan harga ini? Sila balas *Setuju* untuk meneruskan pembayaran."
+        return f"💰 *Jumlah Sebut Harga ({jenis_k}):* {jumlah_harga}\n\nAdakah anda bersetuju dengan harga ini? Sila balas *Setuju* untuk meneruskan pembayaran."
 
     # Default: Mula
     SESSION_STATE[user] = {"status": "tunggu_jenis_trip"}
