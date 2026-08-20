@@ -10,7 +10,7 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Configuration
+# Konfigurasi
 TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 ADMIN = os.getenv("GROUP_ADMIN_NUMBER")
@@ -18,116 +18,73 @@ QR_IMAGE_URL = os.getenv("QR_IMAGE_URL", "")
 TOYYIBPAY_LINK = os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/link-pembayaran-anda")
 SALES_WHATSAPP_LINK = os.getenv("SALES_WHATSAPP_LINK", "https://wa.me/60100000000")
 COMPANY = "SHAHRIL BASRI LEISURE ENTERPRISE"
-DATA_FILE = "data_pelanggan.csv"
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 VERIFY_TOKEN_VAL = os.getenv("VERIFY_TOKEN", "sbleisure_secure_token")
 
 SESSION_STATE = {}
 
-BANK_INFO = {
-    "bank": "CIMB Bank Berhad",
-    "no_akaun": "860 5247 780",
-    "swift": "CIBBMYKLXXX"
-}
-
 BORANG_TEMPLATE = (
-    "Terima kasih kerana berminat dengan perkhidmatan sewaan Mpv/Van/Bas persiaran\n"
-    "🚎 *SB Leisure* 🚎\n\n"
-    "➡️ Mohon Tuan/Puan isi :\n\n"
     "📝 *BORANG MAKLUMAT SEWAAN*\n\n"
-    "Jenis Trip (One Way / Two Way) : \n"
-    "Syarikat : \n"
-    "Alamat : \n\n"
-    "Nama : \n"
-    "No. tel : \n"
-    "Tarikh : \n"
-    "Masa : \n"
-    "Pick-up point : \n"
-    "Drop-off point : \n"
-    "Pax : \n\n"
-    "➡️ Jenis sewaan (Mpv/Van/Bas) : \n\n"
-    "🔄 *Maklumat untuk RETURN trip (Isi jika TWO WAY sahaja) :-*\n\n"
-    "Tarikh : \n"
-    "Masa : \n"
-    "Pick-up point : \n"
-    "Drop-off point : \n"
-    "Pax : \n\n"
-    "📌 *HARGA SEWAAN TERTAKLUK KEPADA JARAK DAN MASA PERJALANAN YANG DIBERIKAN* 📍\n\n"
-    "T.KASIH 😊"
+    "Jenis Trip (One Way/Two Way): \n"
+    "Nama: \n"
+    "Tarikh & Masa: \n"
+    "Pick-up/Drop-off: \n"
+    "Bilangan Pax: \n"
+    "Jenis Kenderaan (MPV/Van/Bas): \n\n"
+    "*(Jika Two Way, sila nyatakan maklumat return trip sekali ya!)*"
 )
 
-def hantar(to, msg, type="text", image_url=None):
+def hantar(to, msg):
     url = f"https://graph.facebook.com/v20.0/{PHONE_ID}/messages"
     headers = {"Authorization": f"Bearer {TOKEN}", "Content-Type": "application/json"}
-    payload = {"messaging_product": "whatsapp", "to": to, "type": type}
-    if type == "text": payload["text"] = {"body": msg}
-    elif type == "image": payload["image"] = {"link": image_url, "caption": msg}
+    payload = {"messaging_product": "whatsapp", "to": to, "type": "text", "text": {"body": msg}}
     requests.post(url, json=payload, headers=headers)
 
-def semak_sop_borang_gemini(text_borang):
-    if not GEMINI_API_KEY: return "LENGKAP"
+def semak_gemini(text, mode="chat"):
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
-        headers = {"Content-Type": "application/json"}
+        # Prompt "Zulfa" yang lebih natural
         prompt = f"""
-        Awak adalah sistem pemantau SOP untuk {COMPANY}. 
-        Semak borang ini:
-        1. Jika 'Two Way', adakah semua ruangan Return Trip diisi? Jika tidak, balas: TIDAK_LENGKAP
-        2. Jika 'One Way', adakah maklumat utama (Nama, Tarikh, Masa, Pick-up, Drop-off, Pax, Jenis Kenderaan) diisi? Jika tidak, balas: TIDAK_LENGKAP
-        3. Jika tarikh tempahan (untuk mana-mana trip) dalam tempoh 1-7 hari dari hari ini ({datetime.now().strftime('%Y-%m-%d')}), balas: URGENT
-        4. Jika maklumat tidak sah/lepas, balas: TIDAK_SAH
+        Awak adalah Zulfa, staf khidmat pelanggan yang sangat peramah untuk {COMPANY}. 
+        Gaya bahasa: Melayu santai, mesra, suka guna panggilan 'awk', 'kitorang', 'tau'.
+        Jangan jadi robot. Jangan asyik ulang soalan yang sama.
         
-        Jika semua syarat dipenuhi, balas: LENGKAP
+        Konteks: {text}
         
-        Mesej: "{text_borang}"
+        Tugasan:
+        1. Jika pelanggan tanya 'ni syarikat apa', jawab dengan mesra dan ceritakan kitorang pakar sewa MPV/Van/Bas.
+        2. Jika pelanggan sekadar menyapa, balas dengan ramah.
+        3. JANGAN hantar borang melainkan pelanggan memang tunjuk minat nak sewa.
+        4. Jika pelanggan tanya pasal sewaan, baru ajak mereka isi borang.
         """
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        res = requests.post(url, json=payload, headers=headers)
-        return res.json()["candidates"][0]["content"]["parts"][0]["text"].strip().upper()
-    except: return "LENGKAP"
-
-def kira_harga_gemini(text_borang):
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key={GEMINI_API_KEY}"
-        headers = {"Content-Type": "application/json"}
-        prompt = f"Berikan anggaran harga untuk tempahan sewaan ini: {text_borang}. Gaya bahasa santai/mesra Zulfa."
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        res = requests.post(url, json=payload, headers=headers)
+        res = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}, headers={"Content-Type": "application/json"})
         return res.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except: return "Anggaran harga: Sila rujuk admin."
+    except: return "Boleh saya bantu apa-apa lagi awk? 😊"
 
 def proses_mesej(user, text):
     msg = text.lower()
     
-    # Pengesahan Harga
-    if user in SESSION_STATE and SESSION_STATE[user].get("status") == "menunggu_persetujuan_harga":
-        if any(k in msg for k in ["setuju", "on", "ok", "proceed"]):
-            borang = SESSION_STATE[user]["borang"]
-            del SESSION_STATE[user]
-            hantar(user, f"Alhamdulillah, terima kasih! Ini maklumat pembayaran:\nBank: {BANK_INFO['bank']}\nNo: {BANK_INFO['no_akaun']}\nRef: {user}", type="image", image_url=QR_IMAGE_URL)
-            return "Sila buat bayaran dan balas 'dah bayar' selepas siap. 🙏"
-        else:
-            del SESSION_STATE[user]
-            return "Baik awk, boleh bincang semula jika ada apa-apa."
+    # Logik perbualan santai
+    if any(k in msg for k in ["hi", "hello", "salam", "selamat"]):
+        return f"Waalaikumussalam/Hai awk! Saya Zulfa dari {COMPANY}. Ada apa-apa yang saya boleh bantu hari ni? 😊"
+    
+    if "syarikat" in msg or "sb leisure" in msg:
+        return "Ye betul awk! Kitorang adalah SB Leisure (Shahril Basri Leisure Enterprise). Kitorang memang pakar sediakan servis sewaan MPV, Van, dan Bas persiaran untuk trip awk ke mana sahaja. Ada plan nak pergi mana-mana ke tu?"
 
-    # Proses Borang
-    if "borang maklumat sewaan" in msg or "pick-up point" in msg:
-        status = semak_sop_borang_gemini(text)
-        if "URGENT" in status: return f"Tempahan urgent (1-7 hari). Sila hubungi sales di sini: {SALES_WHATSAPP_LINK}"
-        if "TIDAK_LENGKAP" in status or "TIDAK_SAH" in status: return f"Borang tidak ikut SOP (One Way/Two Way). Sila semak semula:\n\n{BORANG_TEMPLATE}"
-        
-        harga = kira_harga_gemini(text)
-        SESSION_STATE[user] = {"borang": text, "status": "menunggu_persetujuan_harga"}
-        return f"Terima kasih! 😊 Anggaran harga: {harga}\n\nSetuju dengan harga ni? Balas 'Setuju' untuk teruskan ke pembayaran."
+    # Jika pelanggan tanya pasal sewa
+    if any(k in msg for k in ["sewa", "nak guna", "harga"]):
+        return f"Boleh sangat awk! Kitorang ada banyak pilihan kenderaan. Untuk kitorang bagi sebut harga yang tepat, boleh awk tolong isikan borang ringkas ni? 😊\n\n{BORANG_TEMPLATE}"
 
-    return "Ada apa-apa Zulfa boleh bantu?"
+    return semak_gemini(text)
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
+    if request.method == "GET":
+        return request.args.get("hub.challenge")
     data = request.get_json()
     try:
-        user = data["entry"][0]["changes"][0]["value"]["messages"][0]["from"]
-        body = data["entry"][0]["changes"][0]["value"]["messages"][0]["text"]["body"]
+        msg = data["entry"][0]["changes"][0]["value"]["messages"][0]
+        user, body = msg["from"], msg["text"]["body"]
         hantar(user, proses_mesej(user, body))
     except: pass
     return jsonify({"status": "success"}), 200
