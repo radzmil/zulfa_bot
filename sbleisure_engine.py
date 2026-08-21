@@ -28,14 +28,14 @@ def paparkan_terma_dan_syarat():
 
 
 # ==========================================
-# 2. MODUL VALIDASI & BORANG (DENGAN GATEKEEPING KETAT)
+# 2. MODUL VALIDASI & BORANG (GATEKEEPING KETAT)
 # ==========================================
 
 def validasi_pickup(lokasi):
     """Menyemak zon pickup mengikut senarai kawasan yang dibenarkan sahaja"""
     lokasi = lokasi.strip().lower()
     
-    # Senarai zon yang dibenarkan (Selangor & Kuala Lumpur)
+    # Senarai zon yang dibenarkan (Selangor, KL, KLIA, Cyberjaya, Putrajaya)
     senarai_dibenarkan = [
         # Selangor - Petaling
         "bukit raja", "damansara", "petaling", "sungai buloh",
@@ -55,18 +55,18 @@ def validasi_pickup(lokasi):
         "bagan nakhoda omar", "panchang bedena", "pasiran panjang", "sabak", "sungai panjang",
         # Selangor - Hulu Selangor
         "ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam",
-        # Kuala Lumpur
+        # Kuala Lumpur (5 Daerah & Mukim)
         "kuala lumpur", "pusat bandar", "bukit bintang", "chow kit", "brickfields", "bangsar", "seputehe",
         "kepong", "segambut", "sentul", "jalan ipoh", "mont kiara", "sri hartamas", "batu caves",
         "wangsa maju", "danau kota", "taman melati", "semarak",
-        "ampang hilir", "kampung pandan", "desa pandan", "maluri"
+        "ampang hilir", "kampung pandan", "desa pandan", "maluri",
+        # Tambahan Utama
+        "klia", "cyberjaya", "putrajaya", "airport"
     ]
     
-    # Semak sama ada lokasi mengandungi mana-mana zon yang dibenarkan
     ditemui = any(zon in lokasi for zon in senarai_dibenarkan)
     
     if ditemui:
-        # Tentukan harga asas berdasarkan zon utama
         if any(z in lokasi for z in ["klia", "cyberjaya", "putrajaya", "airport"]):
             return True, 800.00
         else:
@@ -78,11 +78,6 @@ def respon_salah_kawasan():
     return "Maaf bos, lokasi pickup tersebut di luar zon operasi utama kitorang. Sila rujuk sales team untuk bantuan lanjut: https://wa.link/nrmesv"
 
 def semak_tarikh_booking(tarikh_str):
-    """
-    Menyemak tarikh tempahan (Format: YYYY-MM-DD atau DD-MM-YYYY)
-    - 7 hari atau kurang dari tarikh semasa = Urgent Booking
-    - 8 hari dan seterusnya = Boleh ambil booking
-    """
     try:
         if '-' in tarikh_str and len(tarikh_str.split('-')[0]) == 4:
             tarikh_booking = datetime.strptime(tarikh_str, "%Y-%m-%d").date()
@@ -102,7 +97,6 @@ def semak_tarikh_booking(tarikh_str):
         return "ralat", "Format tarikh tidak sah. Sila guna format YYYY-MM-DD atau DD-MM-YYYY."
 
 def paparkan_borang(jenis_transfer):
-    """Memaparkan borang bersih tanpa tag kurungan panduan untuk pelanggan"""
     jenis_transfer = jenis_transfer.strip().lower()
     
     if "two" in jenis_transfer or "2" in jenis_transfer:
@@ -144,7 +138,6 @@ def paparkan_borang(jenis_transfer):
 # ==========================================
 
 def bundar_ke_puluhan_atas(nilai):
-    """Fungsi khas untuk bundar ke atas ke gandaan 10 terdekat (Cth: 920.50 -> 930)"""
     return math.ceil(nilai / 10.0) * 10
 
 def kira_harga_kenderaan_sbleisure(jenis_kenderaan="bas", jenis_transfer="one_way", lokasi_ambil="ampang", jarak_km=0, tarikh_pergi=None, tarikh_balik=None, pilihan_deposit=50):
