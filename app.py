@@ -1,6 +1,4 @@
 from flask import Flask, request, jsonify
-
-# Import modul yang diperlukan
 import sbleisure_profile
 import sbleisure_engine
 import zulfa_brain
@@ -10,13 +8,24 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    # Contoh memanggil fungsi dari modul Zulfa Brain (kalau ada)
-    return "SBLEISURE Bot Server is running smoothly, bosku! Zulfa & Profile engine loaded."
+    return "SBLEISURE Bot Server is running smoothly, bosku! Zulfa is ready."
+
+# Rute baru untuk menerima mesej WhatsApp (Webhook)
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    data = request.json
+    # Logik untuk tangkap mesej daripada WhatsApp
+    mesej_masuk = data.get("message", "")
+    
+    # Hantar mesej masuk ke Zulfa Brain untuk diproses
+    # Anda boleh ubah suai cara zulfa_brain memproses mesej ini
+    respon_daripada_zulfa = zulfa_brain.proses_mesej(mesej_masuk) 
+    
+    return jsonify({"status": "success", "reply": respon_daripada_zulfa})
 
 @app.route("/kira", methods=["POST"])
 def kira_harga():
     data = request.json
-    # Terima data dari user/bot
     kenderaan = data.get("kenderaan", "bas")
     transfer = data.get("transfer", "one_way")
     lokasi = data.get("lokasi", "ampang")
@@ -33,7 +42,6 @@ def kira_harga():
         tarikh_balik=t_balik
     )
     
-    # Respon guna fungsi dari sbleisure_engine
     respon = respon_zulfa(hasil)
     return jsonify({"status": hasil["status"], "mesej": respon, "data_harga": hasil})
 
