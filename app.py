@@ -11,7 +11,7 @@ app = Flask(__name__)
 
 VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "sbleisure_secure_token")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_ID")  # Dikemaskini selari dengan Railway
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
