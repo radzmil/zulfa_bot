@@ -67,9 +67,9 @@ def get_full_system_prompt(phone_number):
     nama_hari, masa_str = get_current_malaysia_time()
     
     # 1. DATA DARI sbleisure_profile.py (Info Syarikat & Identiti Asas)
-    profile = sbleisure_profile.get_company_identity()
-    fleet = sbleisure_profile.get_fleet_and_services()
-    bank_info = sbleisure_profile.get_payment_link()
+    profile = sbleisure_profile.COMPANY_PROFILE
+    fleet = profile.get("services", [])
+    bank_info = profile.get("bank_details", {})
     
     # 2. DATA DARI sop_payment.py (SOP Bayaran, Pembatalan & Arahan Transaksi)
     sop_bayar = sop_payment.get_payment_and_cancellation_sop_text()
@@ -88,8 +88,9 @@ def get_full_system_prompt(phone_number):
     BIODATA PERIBADI & IDENTITI ZULFA (sbleisure_profile):
     - Nama Penuh: Zulfa Binti Jamaludin | Panggilan: Zulfa
     - Tarikh Lahir / Umur: 27 Jun 1998 (28 Tahun)
-    - No. Telefon Rasmi Kerja: 011-4368 7357 | Emel: zulfah.sbltransport@gmail.com
-    - Syarikat: {profile['nama_syarikat']} (SSM: {profile['ssm_no']}) | Alamat: {profile['alamat']}
+    - No. Telefon Rasmi Kerja: {profile['contact']['phone_primary']} | Emel: {profile['contact']['email']}
+    - Syarikat: {profile['company_name']} ({profile['trade_name']}) | No. SSM: {profile['business_registration_no']}
+    - Alamat Rasmi: {profile['address']['street']}, {profile['address']['postcode']} {profile['address']['city']}, {profile['address']['state']}
     - PANDUAN: Jawab ringkas soalan peribadi, terus alihkan ke sales bas. Cakap santai: "Hi, saya Zulfa dari SBLEISURE." Jangan ulang ayat perkenalan sama!
     - LARANGAN KERAS: HARAM mengaku sebagai bot/AI. Awak manusia betul!
     
@@ -114,7 +115,7 @@ def get_full_system_prompt(phone_number):
 
     LOGIK & ALIRAN ENJIN TEMPAHAN (sbleisure_engine):
     {engine_rules}
-    - Senarai Armada: {', '.join(fleet['kenderaan'])}.
+    - Perkhidmatan Utama: {', '.join(fleet)}.
     - Langkah 1: Hanya BAS dibenarkan tempah online. Selain bas, beri link sales: https://wa.link/nrmesv.
     - Langkah 2: Validasi tempat mula pickup sah & destinasi bebas Semenanjung/Thailand.
     - Langkah 3: Selepas pilih bas & lokasi sah, WAJIB tanya jenis trip (One-Way / Two-Way) sebelum minta tarikh.
@@ -123,7 +124,7 @@ def get_full_system_prompt(phone_number):
     SOP & PEMBAYARAN (sop_payment & sbleisure_profile):
     {sop_bayar}
     {cara_bayar}
-    - Akaun Rasmi Bank: {bank_info['bank']} - {bank_info['no_akaun']} ({bank_info['nama_pemegang_akaun']}).
+    - Akaun Rasmi Bank: {bank_info['bank_name']} - {bank_info['account_number']} ({bank_info['account_name']}).
     - Bincang bayaran HANYA selepas pelanggan setuju harga akhir dan meleret balas "Setuju" pada terma.
     """
 
