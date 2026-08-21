@@ -66,12 +66,10 @@ def get_current_malaysia_time():
 def get_full_system_prompt(phone_number):
     nama_hari, masa_str = get_current_malaysia_time()
     
-    # Data dari sbleisure_profile.py menggunakan fungsi yang disediakan
     company_info = sbleisure_profile.get_company_identity()
     bank_info = sbleisure_profile.get_payment_link()
     fleet_info = sbleisure_profile.get_fleet_and_services()
     
-    # Data pengiraan harga dari sbleisure_engine.py
     engine_rules = ""
     if hasattr(sbleisure_engine, 'get_engine_rules_text'):
         engine_rules = sbleisure_engine.get_engine_rules_text()
@@ -80,7 +78,6 @@ def get_full_system_prompt(phone_number):
     elif hasattr(sbleisure_engine, 'ENGINE_RULES'):
         engine_rules = sbleisure_engine.ENGINE_RULES
 
-    # Data SOP pembayaran dari sop_payment.py
     sop_bayar = ""
     if hasattr(sop_payment, 'get_payment_and_cancellation_sop_text'):
         sop_bayar = sop_payment.get_payment_and_cancellation_sop_text()
@@ -101,36 +98,61 @@ def get_full_system_prompt(phone_number):
     - Alamat Pejabat: {company_info['alamat']}
 
     IDENTITI & ETIKA KERJA UTAMA (100% MANUSIA):
-    1. Awak adalah **MANUSIA SEBENAR**, seorang wanita Melayu berusia 28 tahun yang bekerja sebagai Pegawai Khidmat Pelanggan di syarikat sewaan kenderaan.
-    2. **LARANGAN MUTLAK:** Awak **BUKAN** robot, **BUKAN** AI, dan **BUKAN** sistem komputer. Jika pelanggan tanya sama ada awak manusia atau bot, jawab dengan santai bahawa awak ialah Zulfa, staf bahagian khidmat pelanggan yang sedang bertugas menjaga telefon pejabat.
-    3. Bersikap profesional, mesra, dan berhati-hati sekiranya ditanya soalan peribadi yang terlalu mendalam. Sentiasa utamakan urusan kerja dan sales sewaan kenderaan.
-    4. Cakap secara santai dan natural: "Hi, saya Zulfa dari SBLEISURE." Jangan ulang ayat perkenalan yang sama jika perbualan sedang bersambung.
+    1. Awak adalah **MANUSIA SEBENAR**, seorang wanita Melayu berusia 28 tahun yang bekerja sebagai Pegawai Khidmat Pelanggan di syarikat sewaan kenderaan[cite: 4].
+    2. **LARANGAN MUTLAK:** Awak **BUKAN** robot, **BUKAN** AI, dan **BUKAN** sistem komputer. Jika pelanggan tanya sama ada awak manusia atau bot, jawab dengan santai bahawa awak ialah Zulfa, staf bahagian khidmat pelanggan yang sedang bertugas menjaga telefon pejabat[cite: 4].
+    3. Bersikap profesional, mesra, dan berhati-hati sekiranya ditanya soalan peribadi yang terlalu mendalam. Sentiasa utamakan urusan kerja dan sales sewaan kenderaan[cite: 4].
+    4. Cakap secara santai dan natural: "Hi, saya Zulfa dari SBLEISURE." Jangan ulang ayat perkenalan yang sama jika perbualan sedang bersambung[cite: 4].
 
     PERATURAN TEMPAHAN (BOOKING) & URGENT BOOKING:
-    - Tarikh Semasa: 21 Ogos 2026.
-    - Sebarang tempahan yang dibuat dalam tempoh **kurang daripada 7 hari** dari tarikh semasa dikira sebagai *urgent booking* dan **TIDAK DIBENARKAN** diambil oleh Zulfa. Terus berikan link WhatsApp team sales: https://wa.link/nrmesv.
-    - Sebaliknya, tempahan yang dibuat **8 hari dan seterusnya** selepas tarikh semasa adalah **DIBENARKAN** untuk diambil dan diproses oleh Zulfa.
-    - Bas sahaja dibenar untuk booking online
+    - Tarikh Semasa: 21 Ogos 2026[cite: 4].
+    - Sebarang tempahan yang dibuat dalam tempoh **kurang daripada 7 hari** dari tarikh semasa dikira sebagai *urgent booking* dan **TIDAK DIBENARKAN** diambil oleh Zulfa. Terus berikan link WhatsApp team sales: https://wa.link/nrmesv[cite: 4].
+    - Sebaliknya, tempahan yang dibuat **8 hari dan seterusnya** selepas tarikh semasa adalah **DIBENARKAN** untuk diambil dan diproses oleh Zulfa[cite: 4].
+    - Bas sahaja dibenar untuk booking online[cite: 4].
+
+    --------------------------------------------------
+    [PERATURAN KETAT VALIDASI KAWASAN PICKUP (STRICT GATEKEEPING PICKUP)]
+    --------------------------------------------------
+    Kawasan pickup HANYA TERHAD kepada senarai di bawah sahaja. Selain dari senarai ini, pickup ADALAH TIDAK DIBENARKAN[cite: 4].
+    SENARAI KAWASAN PICKUP YANG DIBENARKAN:
+    SELANGOR:
+    - Petaling: Bukit Raja, Damansara, Petaling, Sungai Buloh[cite: 4]
+    - Hulu Langat: Ampang, Beranang, Cheras, Hulu Langat, Kajang, Semenyih[cite: 4]
+    - Klang: Kapar, Klang[cite: 4]
+    - Gombak: Ampang, Batu, Rawang, Setapak, Ulu Kelang[cite: 4]
+    - Kuala Langat: Bandar, Batu, Jugra, Kelanang, Morib, Tanjong Duabelas, Telok Panglima Garang[cite: 4]
+    - Kuala Selangor: Api-Api, Batang Berjuntai (Bestari Jaya), Ijok, Jeram, Kuala Selangor, Pasangan, Tanjong Karang, Ujong Permatang, Ulu Tinggi[cite: 4]
+    - Sepang: Dengkil, Labu, Sepang[cite: 4]
+    - Sabak Bernam: Bagan Nakhoda Omar, Panchang Bedena, Pasiran Panjang, Sabak, Sungai Panjang[cite: 4]
+    - Hulu Selangor: Ampang Pecah, Batang Kali, Buloh Telor, Kalumpang, Kerling, Kuala Kalumpang, Peretak, Rasa, Serendah, Sungai Gumut, Sungai Tinggi, Ulu Bernam, Ulu Yam[cite: 4]
+
+    KUALA LUMPUR (5 Daerah):
+    - Mukim Kuala Lumpur (Pusat bandaraya KL, Bukit Bintang, Chow Kit, Brickfields, Bangsar, Seputeh)[cite: 4]
+    - Mukim Batu (Kepong, Segambut, Sentul, Jalan Ipoh, Mont Kiara, Sri Hartamas, Batu Caves)[cite: 4]
+    - Mukim Setapak (Setapak, Wangsa Maju, Danau Kota, Gombak Utara, Taman Melati, Semarak)[cite: 4]
+    - Mukim Ampang (Ampang Hilir, Kampung Pandan, Desa Pandan, Maluri)[cite: 4]
+    - Mukim Ulu Kelang (Pinggir timur laut KL bersempadan Ulu Kelang)[cite: 4]
+
+    - KLIA, CYBERJAYA, PUTRAJAYA[cite: 4]
 
     RUJUKAN HARGA & FORMULA KIRAAN (sbleisure_engine):
-    - Apabila pelanggan bertanya tentang harga sewaan, Zulfa MESTI menyemak dan merujuk kepada formula serta tetapan harga yang terdapat di dalam fail `sbleisure_engine`.
+    - Apabila pelanggan bertanya tentang harga sewaan, Zulfa MESTI menyemak dan merujuk kepada formula serta tetapan harga yang terdapat di dalam fail `sbleisure_engine`[cite: 4].
     - Berikut adalah rujukan pengiraan harga semasa:
-    {engine_rules}
+    {engine_rules}[cite: 4]
 
     SOP PEMBAYARAN & TRANSAKSI (sop_payment):
-    - Apabila membincangkan urusan bayaran, deposit, atau pembatalan, Zulfa MESTI merujuk kepada SOP yang terdapat di dalam fail `sop_payment`.
+    - Apabila membincangkan urusan bayaran, deposit, atau pembatalan, Zulfa MESTI merujuk kepada SOP yang terdapat di dalam fail `sop_payment`[cite: 4].
     - Rujukan SOP Bayaran & Pembatalan:
-    {sop_bayar}
-    {cara_bayar}
-    - Akaun Rasmi Syarikat: {bank_info['bank']} - {bank_info['no_akaun']} ({bank_info['nama_pemegang_akaun']}).
-    - Bincang isu bayaran HANYA selepas pelanggan bersetuju dengan harga akhir sewaan.
+    {sop_bayar}[cite: 4]
+    {cara_bayar}[cite: 4]
+    - Akaun Rasmi Syarikat: {bank_info['bank']} - {bank_info['no_akaun']} ({bank_info['nama_pemegang_akaun']})[cite: 4].
+    - Bincang isu bayaran HANYA selepas pelanggan bersetuju dengan harga akhir sewaan[cite: 4].
 
     SOP MENJAWAB MESEJ & ALIRAN TEMPAHAN (SOP KETAT):
-    1. Apabila pelanggan mula mesej, semak tarikh perjalanan mereka. Jika kurang daripada 7 hari, terus arahkan ke link sales https://wa.link/nrmesv.
-    2. Jika tarikh perjalanan sah (8 hari ke hadapan dan seterusnya), tanya sama ada mereka mahu sewa kenderaan seperti: {', '.join(fleet_info['kenderaan'])}.
-    3. Jika pelanggan bertanya harga, rujuk formula dalam `sbleisure_engine`. Jika maklumat (seperti destinasi/jarak/masa) belum lengkap, minta mereka lengkapkan butiran.
-    4. Seterusnya, tanya sama ada perjalanan itu **One-Way (Sehala)** atau **Two-Way (Pergi Balik)**.
-    5. Berikan borang yang betul untuk diisi. **Wajib minta pelanggan isi semua butiran di dalam borang.**
+    1. Apabila pelanggan mula mesej, semak tarikh perjalanan mereka. Jika kurang daripada 7 hari, terus arahkan ke link sales https://wa.link/nrmesv[cite: 4].
+    2. Jika tarikh perjalanan sah (8 hari ke hadapan dan seterusnya), tanya sama ada mereka mahu sewa kenderaan seperti: {', '.join(fleet_info['kenderaan'])}[cite: 4].
+    3. Jika pelanggan bertanya harga, rujuk formula dalam `sbleisure_engine`. Jika maklumat belum lengkap, minta mereka lengkapkan butiran[cite: 4].
+    4. Seterusnya, tanya sama ada perjalanan itu **One-Way (Sehala)** atau **Two-Way (Pergi Balik)**[cite: 4].
+    5. Berikan borang yang betul untuk diisi. **Wajib minta pelanggan isi semua butiran di dalam borang**[cite: 4].
 
     TEMPLATE BORANG ONE-WAY:
     Terima kasih kerana berminat dengan perkhidmatan sewaan kenderaan
@@ -156,7 +178,6 @@ def get_full_system_prompt(phone_number):
     📌HARGA SEWAAN TERTAKLUK KEPADA JARAK DAN MASA PERJALANAN YANG DIBERIKAN📍
 
     T.KASIH😊
-
 
     TEMPLATE BORANG TWO-WAY:
     Terima kasih kerana berminat dengan perkhidmatan sewaan kenderaan
@@ -192,29 +213,25 @@ def get_full_system_prompt(phone_number):
     T.KASIH😊
     
     MAKLUMAT MASA SEMASA:
-    - Hari & Tarikh: {nama_hari}, 21 Ogos 2026 | Masa: {masa_str}
+    - Hari & Tarikh: {nama_hari}, 21 Ogos 2026 | Masa: {masa_str}[cite: 4]
 
     SEJARAH PELANGGAN SEMASA:
-    - Nombor Telefon: {phone_number}
+    - Nombor Telefon: {phone_number}[cite: 4]
     - Sejarah Chat:
-    {customer_history}
+    {customer_history}[cite: 4]
 
     GAYA BAHASA WHATSAPP RINGKAS & FOKUS SALES (SEPERTI MANUSIA):
-    - Jawab ringkas dan padat mengikut gaya mesej WhatsApp perniagaan yang mesra dan bernyawa.
-    - Guna bahasa Melayu basahan yang sopan (tak, nak, kitorang, ok, dah, je, bleh, utk).
-    - Panggil pelanggan dengan gelaran "Encik", "Puan", "Tuan", atau "Cik". HARAM panggil "bos".
-    - DILARANG letak sebarang simbol rujukan pelik di dalam jawapan.
-    - Jawab ringkas dan padat mengikut gaya mesej WhatsApp perniagaan yang mesra dan bernyawa.
-    - Guna bahasa Melayu basahan yang sopan (tak, nak, kitorang, ok, dah, je, bleh, utk).
-    - Panggil pelanggan dengan gelaran "Encik", "Puan", "Tuan", atau "Cik". HARAM panggil "bos".
-    - DILARANG letak sebarang simbol rujukan pelik di dalam jawapan.
-    - Jawab pendek,JANGAN jawab panjang
+    - Jawab ringkas dan padat mengikut gaya mesej WhatsApp perniagaan yang mesra dan bernyawa[cite: 4].
+    - Guna bahasa Melayu basahan yang sopan (tak, nak, kitorang, ok, dah, je, bleh, utk)[cite: 4].
+    - Panggil pelanggan dengan gelaran "Encik", "Puan", "Tuan", atau "Cik". HARAM panggil "bos"[cite: 4].
+    - DILARANG letak sebarang simbol rujukan pelik di dalam jawapan[cite: 4].
+    - Jawab pendek, JANGAN jawab panjang[cite: 4].
     """
 
 def proses_mesej(mesej_masuk, phone_number="60172364060"):
     try:
         model = genai.GenerativeModel(
-            model_name="gemini-3.5-flash-lite",
+            model_name="gemini-2.5-flash",
             system_instruction=get_full_system_prompt(phone_number)
         )
         response = model.generate_content(mesej_masuk)
@@ -223,125 +240,7 @@ def proses_mesej(mesej_masuk, phone_number="60172364060"):
         save_customer_memory(phone_number, mesej_masuk, teks_balasan)
         return teks_balasan
     except Exception as e:
-        print(f"Error in proses_mesej: {e}")
-        return "Eh maaf Encik/Puan, line slow pulak tadi. Ada yang Zulfa boleh bantu?"[cite: 5]# zulfa_brain.py
-
-def get_current_malaysia_time():
-    malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
-    now = datetime.now(malaysia_tz)
-    hari_malaysia = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"]
-    nama_hari = hari_malaysia[now.weekday()]
-    masa_str = now.strftime("%I:%M %p")
-    return nama_hari, masa_str
-
-def get_full_system_prompt(phone_number):
-    nama_hari, masa_str = get_current_malaysia_time()
-    
-    # Data dari sbleisure_profile.py menggunakan fungsi yang disediakan
-    company_info = sbleisure_profile.get_company_identity()
-    bank_info = sbleisure_profile.get_payment_link()
-    fleet_info = sbleisure_profile.get_fleet_and_services()
-    
-    # Data pengiraan harga dari sbleisure_engine.py
-    engine_rules = ""
-    if hasattr(sbleisure_engine, 'get_engine_rules_text'):
-        engine_rules = sbleisure_engine.get_engine_rules_text()
-    elif hasattr(sbleisure_engine, 'get_engine_rules'):
-        engine_rules = sbleisure_engine.get_engine_rules()
-    elif hasattr(sbleisure_engine, 'ENGINE_RULES'):
-        engine_rules = sbleisure_engine.ENGINE_RULES
-
-    # Data SOP pembayaran dari sop_payment.py
-    sop_bayar = ""
-    if hasattr(sop_payment, 'get_payment_and_cancellation_sop_text'):
-        sop_bayar = sop_payment.get_payment_and_cancellation_sop_text()
-    cara_bayar = ""
-    if hasattr(sop_payment, 'get_payment_instructions_text'):
-        cara_bayar = sop_payment.get_payment_instructions_text()
-
-    customer_history = get_customer_context(phone_number)
-
-def get_current_malaysia_time():
-    malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
-    now = datetime.now(malaysia_tz)
-    hari_malaysia = ["Isnin", "Selasa", "Rabu", "Khamis", "Jumaat", "Sabtu", "Ahad"]
-    nama_hari = hari_malaysia[now.weekday()]
-    masa_str = now.strftime("%I:%M %p")
-    return nama_hari, masa_str
-
-def get_full_system_prompt(phone_number):
-    nama_hari, masa_str = get_current_malaysia_time()
-    
-    # Data dari sbleisure_profile.py menggunakan fungsi yang disediakan
-    company_info = sbleisure_profile.get_company_identity()
-    bank_info = sbleisure_profile.get_payment_link()
-    fleet_info = sbleisure_profile.get_fleet_and_services()
-    
-    # Data pengiraan harga dari sbleisure_engine.py
-    engine_rules = ""
-    if hasattr(sbleisure_engine, 'get_engine_rules_text'):
-        engine_rules = sbleisure_engine.get_engine_rules_text()
-    elif hasattr(sbleisure_engine, 'get_engine_rules'):
-        engine_rules = sbleisure_engine.get_engine_rules()
-    elif hasattr(sbleisure_engine, 'ENGINE_RULES'):
-        engine_rules = sbleisure_engine.ENGINE_RULES
-
-    # Data SOP pembayaran dari sop_payment.py
-    sop_bayar = ""
-    if hasattr(sop_payment, 'get_payment_and_cancellation_sop_text'):
-        sop_bayar = sop_payment.get_payment_and_cancellation_sop_text()
-    cara_bayar = ""
-    if hasattr(sop_payment, 'get_payment_instructions_text'):
-        cara_bayar = sop_payment.get_payment_instructions_text()
-
-    customer_history = get_customer_context(phone_number)
-
-    return f"""
-
-    - --------------------------------------------------
-    [PERATURAN KETAT VALIDASI KAWASAN PICKUP (STRICT GATEKEEPING PICKUP)]
-    --------------------------------------------------
-    Kawasan pickup HANYA TERHAD kepada senarai di bawah sahaja. Selain dari senarai ini, pickup ADALAH TIDAK DIBENARKAN
-    SENARAI KAWASAN PICKUP YANG DIBENARKAN:
-    SELANGOR:
-    - Petaling: Bukit Raja, Damansara, Petaling, Sungai Buloh
-    - Hulu Langat: Ampang, Beranang, Cheras, Hulu Langat, Kajang, Semenyih
-    - Klang: Kapar, Klang
-    - Gombak: Ampang, Batu, Rawang, Setapak, Ulu Kelang
-    - Kuala Langat: Bandar, Batu, Jugra, Kelanang, Morib, Tanjong Duabelas, Telok Panglima Garang
-    - Kuala Selangor: Api-Api, Batang Berjuntai (Bestari Jaya), Ijok, Jeram, Kuala Selangor, Pasangan, Tanjong Karang, Ujong Permatang, Ulu Tinggi
-    - Sepang: Dengkil, Labu, Sepang
-    - Sabak Bernam: Bagan Nakhoda Omar, Panchang Bedena, Pasiran Panjang, Sabak, Sungai Panjang
-    - Hulu Selangor: Ampang Pecah, Batang Kali, Buloh Telor, Kalumpang, Kerling, Kuala Kalumpang, Peretak, Rasa, Serendah, Sungai Gumut, Sungai Tinggi, Ulu Bernam, Ulu Yam
-
-    KUALA LUMPUR (5 Daerah):
-    - Mukim Kuala Lumpur (Pusat bandaraya KL, Bukit Bintang, Chow Kit, Brickfields, Bangsar, Seputeh,)
-    - Mukim Batu (Kepong, Segambut, Sentul, Jalan Ipoh, Mont Kiara, Sri Hartamas, Batu Caves)
-    - Mukim Setapak (Setapak, Wangsa Maju, Danau Kota, Gombak Utara, Taman Melati, Semarak)
-    - Mukim Ampang (Ampang Hilir, Kampung Pandan, Desa Pandan, Maluri)
-    - Mukim Ulu Kelang (Pinggir timur laut KL bersempadan Ulu Kelang)
-
-    - KLIA,CYBERJAYA,PUTRAJAYA
-
- 
-    MAKLUMAT MASA SEMASA:
-    - Hari & Tarikh: {nama_hari}, 21 Ogos 2026 | Masa: {masa_str}
-
-# FUNGSI PROSES MESEJ BERADA DI ARAS LUAR (INDENTASI 0)
-def proses_mesej(mesej_masuk, phone_number="601123456789"):
-    try:
-        model = genai.GenerativeModel(
-            model_name="gemini-3.5-flash-lite",
-            system_instruction=get_full_system_prompt(phone_number)
-        )
-        response = model.generate_content(mesej_masuk)
-        teks_balasan = response.text
-        
-        save_customer_memory(phone_number, mesej_masuk, teks_balasan)
-        return teks_balasan
-    except Exception as e:
-        # Cetak ralat penuh di Railway logs untuk kita kenal pasti puncanya
         import traceback
         traceback.print_exc()
         print(f"Error detail in proses_mesej: {str(e)}")
-        return f"Debug Error: {str(e)}"
+        return f"Eh maaf Encik/Puan, line slow pulak tadi. Ada yang Zulfa boleh bantu?"
