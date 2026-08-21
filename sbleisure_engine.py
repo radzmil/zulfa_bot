@@ -23,7 +23,7 @@ def paparkan_terma_dan_syarat():
         "   Deposit + Baki yang telah dibayar akan dikembalikan 100% dalam 7 hari bekerja.\n\n"
         "**5. Nota Penting**\n"
         "   Deposit adalah untuk menahan tarikh. Jika tarikh dibatalkan, kami rugi peluang job lain. Oleh itu deposit tidak dikembalikan.\n\n"
-        "*Adakah bos bersetuju dengan Terma & Syarat di atas? (Sila balas 'Setuju' untuk meneruskan tempahan)*"
+        "*Adakah anda bersetuju dengan Terma & Syarat di atas? (Sila balas 'Setuju' untuk meneruskan tempahan)*"
     )
 
 
@@ -35,11 +35,8 @@ def validasi_pickup(lokasi):
     """Menyemak zon pickup mukim Selangor & Negeri Sembilan berserta harga asas rasmi"""
     lokasi = lokasi.strip().lower()
     
-    # 1. KLIA, Cyberjaya, Putrajaya
     if any(z in lokasi for z in ["klia", "cyberjaya", "putrajaya", "airport"]):
         return True, 800.00
-        
-    # 2. SELANGOR
     if any(z in lokasi for z in ["bukit raja", "sungai buloh"]):
         return True, 900.00
     if any(z in lokasi for z in ["damansara", "petaling"]):
@@ -67,7 +64,6 @@ def validasi_pickup(lokasi):
     if any(z in lokasi for z in ["ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam"]):
         return True, 1000.00
 
-    # 3. NEGERI SEMBILAN
     if any(z in lokasi for z in ["ampangan", "lenggeng", "pantai", "rantau", "rasah", "seremban", "setul"]):
         return True, 1200.00
     if any(z in lokasi for z in ["jimah", "linggi", "pasir panjang", "port dickson", "si rusa"]):
@@ -83,21 +79,15 @@ def validasi_pickup(lokasi):
     if any(z in lokasi for z in ["ayer kuning", "gemencheh", "gemas", "kepis", "ladang", "tampin tengah"]):
         return True, 1600.00
 
-    # 4. KUALA LUMPUR (5 Daerah)
     if any(z in lokasi for z in ["kuala lumpur", "pusat bandar", "bukit bintang", "chow kit", "brickfields", "bangsar", "seputehe", "kepong", "segambut", "sentul", "jalan ipoh", "mont kiara", "sri hartamas", "batu caves", "wangsa maju", "danau kota", "taman melati", "semarak", "ampang hilir", "kampung pandan", "desa pandan", "maluri"]):
         return True, 700.00
         
     return False, 0.00
 
 def respon_salah_kawasan():
-    return "Maaf bos, lokasi pickup tersebut di luar zon operasi utama kitorang. Sila rujuk sales team untuk bantuan lanjut: https://wa.link/nrmesv"
+    return "Maaf, lokasi pickup tersebut di luar zon operasi utama kami. Sila rujuk sales team untuk bantuan lanjut: https://wa.link/nrmesv"
 
 def semak_tarikh_booking(tarikh_str):
-    """
-    SOP KETAT TARIKH:
-    - 7 hari atau kurang dari tarikh semasa = Urgent Booking (TIDAK BOLEH ambil tempahan, rujuk sales)
-    - 8 hari dan seterusnya = Lulus untuk tempahan
-    """
     try:
         if '-' in tarikh_str and len(tarikh_str.split('-')[0]) == 4:
             tarikh_booking = datetime.strptime(tarikh_str, "%Y-%m-%d").date()
@@ -108,9 +98,9 @@ def semak_tarikh_booking(tarikh_str):
         selisih_hari = (tarikh_booking - tarikh_semasa).days
         
         if selisih_hari < 0:
-            return "tidak_sah", "Tarikh yang dipilih sudah lepas, bos."
+            return "tidak_sah", "Tarikh yang dipilih sudah lepas."
         elif selisih_hari <= 7:
-            return "urgent", "Maaf bos, untuk tempahan dalam masa 7 hari atau kurang (urgent booking), sistem tak boleh terima. Sila direct roger sales team kitorang ya: https://wa.link/nrmesv"
+            return "urgent", "Maaf, untuk tempahan dalam masa 7 hari atau kurang (urgent booking), sistem tidak boleh terima. Sila berhubung terus dengan sales team kami di pautan ini: https://wa.link/nrmesv"
         else:
             return "boleh", "Tarikh disahkan lulus untuk tempahan."
     except ValueError:
@@ -166,7 +156,7 @@ def kira_harga_kenderaan_sbleisure(jenis_kenderaan="bas", jenis_transfer="one_wa
     if jenis_kenderaan == "tour":
         return {
             "status": "rujuk_sales",
-            "mesej": "Eh, utk trip jenis Tour ni kita tak terima booking online, bosku. Sila direct roger sales team kitorang kat sini eh: https://wa.link/nrmesv"
+            "mesej": "Untuk trip jenis Tour, tempahan tidak diambil secara atas talian. Sila berhubung terus dengan sales team kami di sini: https://wa.link/nrmesv"
         }
     
     lokasi_ambil = lokasi_ambil.strip().lower()
@@ -222,5 +212,5 @@ def respon_zulfa(hasil_kiraan):
     if hasil_kiraan["status"] in ["rujuk_sales", "salah_kawasan"]:
         return hasil_kiraan["mesej"]
     
-    return (f"Ok bos, anggaran harga untuk sewaan ni adalah **RM {hasil_kiraan['harga']}** (harga ni dah *all-in* termasuk tol semua skali ya). "
-            f"Bos setuju tak dengan harga ni?")
+    return (f"Anggaran harga untuk sewaan ini adalah **RM {hasil_kiraan['harga']}** (harga ini adalah *all-in* termasuk tol). "
+            f"Adakah anda bersetuju dengan harga ini?")
