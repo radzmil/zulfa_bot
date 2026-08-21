@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 import requests
 import os
 import zulfa_brain
+import sop_payment  # Import modul sop_payment untuk guna fungsi admin
 
 app = Flask(__name__)
 
@@ -60,12 +61,41 @@ def webhook():
                 if messages:
                     msg = messages[0]
                     phone_number = msg.get("from")
-                    msg_body = msg.get("text", {}).get("body", "")
+                    msg_body = msg.get("text", {}).get("body", "", cite: 2)
                     
                     if msg_body:
                         balasan = zulfa_brain.proses_mesej(msg_body, phone_number)
                         print(f"Zulfa Response: {balasan}")
+                        
+                        # Hantar balasan kepada pelanggan
                         send_whatsapp_message(phone_number, balasan)
+                        
+                        # Ambil nombor admin terkini daripada fungsi sop_payment
+                        admin_phone = sop_payment.get_group_admin_number()
+                        
+                        # 1. Semak jika pelanggan hantar borang tempahan
+                        if "BORANG MAKLUMAT SEWAAN" in msg_body.upper() or ("PICK-UP POINT" in msg_body.upper() and "TARIKH" in msg_body.upper()):
+                            if admin_phone:
+                                notif_text = f"🔔 *TEMPAHAN BAHARU DITERIMA*\nDaripada No: {phone_number}\n\n{msg_body}"
+                                send_whatsapp_message(admin_phone, notif_text)
+                                print(f"Notifikasi borang tempahan berjaya dihantar kepada Admin: {admin_phone}")
+                        
+                        # 2. Semak jika pelanggan hantar mesej berkaitan pembayaran/resit (untuk notifikasi bayaran)
+                        keywords_bayar = ["resit", "slip", "dah bayar", "payment", "toyyibpay", "qr", "transfer", "bankin"]
+                        if any(k in msg_body.lower() for k in keywords_bayar):
+                            if admin_phone:
+                                booking_data = {
+                                    "ref_id": f"REF-{phone_number[-4:]}",
+                                    "nama": f"Pelanggan ({phone_number})",
+                                    "tarikh": "Rujuk perbualan chat",
+                                    "transfer_type": msg_body[:50], # Petikan mesej ringkas pelanggan
+                                    "masa": "-",
+                                    "destinasi": "-",
+                                    "status_bayaran": "MENUNGGU SAHKAN ADMIN (Resit Diterima)"
+                                }
+                                notif_bayaran = sop_payment.format_admin_notification(booking_data)
+                                send_whatsapp_message(admin_phone, notif_bayaran)
+                                print(f"Notifikasi bayaran berjaya dihantar kepada Admin: {admin_phone}")
                         
         return jsonify({"status": "success"}), 200
     except Exception as e:
