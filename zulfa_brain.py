@@ -145,7 +145,7 @@ def get_full_system_prompt(phone_number):
 
     Nama : 
     No. tel : 
-    Tarikh : 
+    Tarikh :  
     Masa : 
     Pick-up point : 
     Drop-off point : 
@@ -225,61 +225,6 @@ def proses_mesej(mesej_masuk, phone_number="60172364060"):
     except Exception as e:
         print(f"Error in proses_mesej: {e}")
         return "Eh maaf Encik/Puan, line slow pulak tadi. Ada yang Zulfa boleh bantu?"[cite: 5]# zulfa_brain.py
-from datetime import datetime
-import pytz
-import os
-import json
-import google.generativeai as genai
-from dotenv import load_dotenv
-
-# Menghubungkan fail profil syarikat, enjin pengiraan harga & SOP pembayaran
-import sbleisure_profile
-import sbleisure_engine
-import sop_payment
-
-load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-
-MEMORY_FILE = "zulfa_customers_memory.json"
-
-def load_all_memories():
-    if os.path.exists(MEMORY_FILE):
-        try:
-            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
-
-def save_customer_memory(phone_number, user_input, zulfa_response):
-    all_memories = load_all_memories()
-    if phone_number not in all_memories:
-        all_memories[phone_number] = {
-            "phone": phone_number,
-            "first_interaction": datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).strftime("%Y-%m-%d %I:%M %p"),
-            "chat_history": []
-        }
-    all_memories[phone_number]["chat_history"].append({
-        "timestamp": datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).strftime("%Y-%m-%d %I:%M %p"),
-        "pelanggan": user_input,
-        "zulfa": zulfa_response
-    })
-    if len(all_memories[phone_number]["chat_history"]) > 20:
-        all_memories[phone_number]["chat_history"] = all_memories[phone_number]["chat_history"][-20:]
-    try:
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(all_memories, f, ensure_ascii=False, indent=4)
-    except Exception:
-        pass
-
-def get_customer_context(phone_number):
-    all_memories = load_all_memories()
-    if phone_number in all_memories:
-        history = all_memories[phone_number]["chat_history"]
-        return "\n".join([f"- Pelanggan: {h['pelanggan']} | Zulfa: {h['zulfa']}" for h in history[-5:]])
-    return "Tiada rekod perbualan lepas dengan nombor ini (Pelanggan Baru)."
 
 def get_current_malaysia_time():
     malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
@@ -315,62 +260,6 @@ def get_full_system_prompt(phone_number):
         cara_bayar = sop_payment.get_payment_instructions_text()
 
     customer_history = get_customer_context(phone_number)
-
-from datetime import datetime
-import pytz
-import os
-import json
-import google.generativeai as genai
-from dotenv import load_dotenv
-
-# Menghubungkan fail profil syarikat, enjin pengiraan harga & SOP pembayaran
-import sbleisure_profile
-import sbleisure_engine
-import sop_payment
-
-load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-
-MEMORY_FILE = "zulfa_customers_memory.json"
-
-def load_all_memories():
-    if os.path.exists(MEMORY_FILE):
-        try:
-            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            return {}
-    return {}
-
-def save_customer_memory(phone_number, user_input, zulfa_response):
-    all_memories = load_all_memories()
-    if phone_number not in all_memories:
-        all_memories[phone_number] = {
-            "phone": phone_number,
-            "first_interaction": datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).strftime("%Y-%m-%d %I:%M %p"),
-            "chat_history": []
-        }
-    all_memories[phone_number]["chat_history"].append({
-        "timestamp": datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).strftime("%Y-%m-%d %I:%M %p"),
-        "pelanggan": user_input,
-        "zulfa": zulfa_response
-    })
-    if len(all_memories[phone_number]["chat_history"]) > 20:
-        all_memories[phone_number]["chat_history"] = all_memories[phone_number]["chat_history"][-20:]
-    try:
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(all_memories, f, ensure_ascii=False, indent=4)
-    except Exception:
-        pass
-
-def get_customer_context(phone_number):
-    all_memories = load_all_memories()
-    if phone_number in all_memories:
-        history = all_memories[phone_number]["chat_history"]
-        return "\n".join([f"- Pelanggan: {h['pelanggan']} | Zulfa: {h['zulfa']}" for h in history[-5:]])
-    return "Tiada rekod perbualan lepas dengan nombor ini (Pelanggan Baru)."
 
 def get_current_malaysia_time():
     malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
@@ -434,26 +323,9 @@ def get_full_system_prompt(phone_number):
 
     - KLIA,CYBERJAYA,PUTRAJAYA
 
-    RUJUKAN HARGA & FORMULA KIRAAN (sbleisure_engine):
-    - Apabila pelanggan bertanya tentang harga sewaan, Zulfa MESTI menyemak dan merujuk kepada formula serta tetapan harga yang terdapat di dalam fail `sbleisure_engine`.
-    - Berikut adalah rujukan pengiraan harga semasa:
-    {engine_rules}
-
-    SOP PEMBAYARAN & TRANSAKSI (sop_payment):
-    - Apabila membincangkan urusan bayaran, deposit, atau pembatalan, Zulfa MESTI merujuk kepada SOP yang terdapat di dalam fail `sop_payment`.
-    - Rujukan SOP Bayaran & Pembatalan:
-    {sop_bayar}
-    {cara_bayar}
-    - Akaun Rasmi Syarikat: {bank_info['bank']} - {bank_info['no_akaun']} ({bank_info['nama_pemegang_akaun']}).
-    - Bincang isu bayaran HANYA selepas pelanggan bersetuju dengan harga akhir sewaan.
  
     MAKLUMAT MASA SEMASA:
     - Hari & Tarikh: {nama_hari}, 21 Ogos 2026 | Masa: {masa_str}
-
-    SEJARAH PELANGGAN SEMASA:
-    - Nombor Telefon: {phone_number}
-    - Sejarah Chat:
-    {customer_history}
 
 # FUNGSI PROSES MESEJ BERADA DI ARAS LUAR (INDENTASI 0)
 def proses_mesej(mesej_masuk, phone_number="601123456789"):
