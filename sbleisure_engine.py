@@ -28,50 +28,65 @@ def paparkan_terma_dan_syarat():
 
 
 # ==========================================
-# 2. MODUL VALIDASI & BORANG (GATEKEEPING KETAT)
+# 2. MODUL VALIDASI & HARGA ASAS MENGIKUT ZON
 # ==========================================
 
 def validasi_pickup(lokasi):
-    """Menyemak zon pickup mengikut senarai kawasan yang dibenarkan sahaja"""
+    """Menyemak zon pickup mukim Selangor & Negeri Sembilan berserta harga asas rasmi"""
     lokasi = lokasi.strip().lower()
     
-    # Senarai zon yang dibenarkan (Selangor, KL, KLIA, Cyberjaya, Putrajaya)
-    senarai_dibenarkan = [
-        # Selangor - Petaling
-        "bukit raja", "damansara", "petaling", "sungai buloh",
-        # Selangor - Hulu Langat
-        "ampang", "beranang", "cheras", "hulu langat", "kajang", "semenyih",
-        # Selangor - Klang
-        "kapar", "klang",
-        # Selangor - Gombak
-        "batu", "rawang", "setapak", "ulu kelang",
-        # Selangor - Kuala Langat
-        "bandar", "jugra", "kelanang", "morib", "tanjong duabelas", "telok panglima garang",
-        # Selangor - Kuala Selangor
-        "api-api", "batang berjuntai", "bestari jaya", "ijok", "jeram", "kuala selangor", "pasangan", "tanjong karang", "ujong permatang", "ulu tinggi",
-        # Selangor - Sepang
-        "dengkil", "labu", "sepang",
-        # Selangor - Sabak Bernam
-        "bagan nakhoda omar", "panchang bedena", "pasiran panjang", "sabak", "sungai panjang",
-        # Selangor - Hulu Selangor
-        "ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam",
-        # Kuala Lumpur (5 Daerah & Mukim)
-        "kuala lumpur", "pusat bandar", "bukit bintang", "chow kit", "brickfields", "bangsar", "seputehe",
-        "kepong", "segambut", "sentul", "jalan ipoh", "mont kiara", "sri hartamas", "batu caves",
-        "wangsa maju", "danau kota", "taman melati", "semarak",
-        "ampang hilir", "kampung pandan", "desa pandan", "maluri",
-        # Tambahan Utama
-        "klia", "cyberjaya", "putrajaya", "airport"
-    ]
-    
-    ditemui = any(zon in lokasi for zon in senarai_dibenarkan)
-    
-    if ditemui:
-        if any(z in lokasi for z in ["klia", "cyberjaya", "putrajaya", "airport"]):
-            return True, 800.00
-        else:
-            return True, 700.00
-            
+    # 1. KLIA, Cyberjaya, Putrajaya
+    if any(z in lokasi for z in ["klia", "cyberjaya", "putrajaya", "airport"]):
+        return True, 800.00
+        
+    # 2. SELANGOR
+    if any(z in lokasi for z in ["bukit raja", "sungai buloh"]):
+        return True, 900.00
+    if any(z in lokasi for z in ["damansara", "petaling"]):
+        return True, 800.00
+    if any(z in lokasi for z in ["ampang", "cheras", "hulu langat"]):
+        return True, 700.00
+    if "beranang" in lokasi:
+        return True, 900.00
+    if any(z in lokasi for z in ["kajang", "semenyih"]):
+        return True, 800.00
+    if any(z in lokasi for z in ["kapar", "klang"]):
+        return True, 900.00
+    if any(z in lokasi for z in ["batu", "setapak", "ulu kelang"]):
+        return True, 700.00
+    if "rawang" in lokasi:
+        return True, 800.00
+    if any(z in lokasi for z in ["bandar", "jugra", "kelanang", "morib", "tanjong duabelas", "telok panglima garang"]):
+        return True, 1000.00
+    if any(z in lokasi for z in ["api-api", "batang berjuntai", "bestari jaya", "ijok", "jeram", "kuala selangor", "pasangan", "tanjong karang", "ujong permatang", "ulu tinggi"]):
+        return True, 1200.00
+    if any(z in lokasi for z in ["dengkil", "labu", "sepang"]):
+        return True, 800.00
+    if any(z in lokasi for z in ["bagan nakhoda omar", "panchang bedena", "pasiran panjang", "sabak", "sungai panjang"]):
+        return True, 1200.00
+    if any(z in lokasi for z in ["ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam"]):
+        return True, 1000.00
+
+    # 3. NEGERI SEMBILAN
+    if any(z in lokasi for z in ["ampangan", "lenggeng", "pantai", "rantau", "rasah", "seremban", "setul"]):
+        return True, 1200.00
+    if any(z in lokasi for z in ["jimah", "linggi", "pasir panjang", "port dickson", "si rusa"]):
+        return True, 1200.00
+    if any(z in lokasi for z in ["batu kikir", "chembong", "gadong", "kota", "kundor", "legong hilir", "legong hulu", "mambau", "nerasau", "pedas", "pilin", "seberang", "titian bintangor", "batu hampar", "gadong hilir", "rembau"]):
+        return True, 1400.00
+    if any(z in lokasi for z in ["ampang tinggi", "johol", "juasseh", "kepas", "kuala pilah", "langkap", "seri menanti", "ulu jempol", "terachi", "parit tinggi"]):
+        return True, 1400.00
+    if any(z in lokasi for z in ["glami lemi", "hulu klawang", "klawang", "pertang", "peradong", "kenaboi", "triang hilir", "ulu triang"]):
+        return True, 1400.00
+    if any(z in lokasi for z in ["jelai", "serting ilir", "serting hulu", "palong"]):
+        return True, 1600.00
+    if any(z in lokasi for z in ["ayer kuning", "gemencheh", "gemas", "kepis", "ladang", "tampin tengah"]):
+        return True, 1600.00
+
+    # 4. KUALA LUMPUR (5 Daerah)
+    if any(z in lokasi for z in ["kuala lumpur", "pusat bandar", "bukit bintang", "chow kit", "brickfields", "bangsar", "seputehe", "kepong", "segambut", "sentul", "jalan ipoh", "mont kiara", "sri hartamas", "batu caves", "wangsa maju", "danau kota", "taman melati", "semarak", "ampang hilir", "kampung pandan", "desa pandan", "maluri"]):
+        return True, 700.00
+        
     return False, 0.00
 
 def respon_salah_kawasan():
