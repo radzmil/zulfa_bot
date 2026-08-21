@@ -62,10 +62,13 @@ def get_payment_instructions_text(pilihan=""):
         )
     elif str(pilihan) == "2" or "qr" in str(pilihan).lower():
         return (
-            "Baik bos! Sila scan QR Code DuitNow di bawah untuk pembayaran:\n\n"
+            "Baik bos! Sila rujuk imej QR Code DuitNow rasmi syarikat kita di bawah:\n\n"
             f"🖼️ {qr_link}\n\n"
-            f"Atau transfer manual ke: {bank['bank']} - {bank['no_akaun']} ({bank['nama_pemegang_akaun']})\n\n"
-            "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
+            f"Atau boleh transfer manual ke akaun rasmi:\n"
+            f"• Bank: {bank['bank']}\n"
+            f"• No Akaun: {bank['no_akaun']}\n"
+            f"• Nama: {bank['nama_pemegang_akaun']}\n\n"
+            "Dah setel nanti, rojer hantar gambar resit atau slip pembayaran kat Zulfa k."
         )
     else:
         # Fallback jika pilihan belum dibuat atau tidak dikenal pasti
