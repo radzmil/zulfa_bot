@@ -48,7 +48,7 @@ def get_payment_method_prompt():
         "Sila balas pilihan *1* atau *2* ya k."
     )
 
-def get_payment_instructions_text(pilihan):
+def get_payment_instructions_text(pilihan=""):
     """Format teks pilihan cara bayar mengikut pilihan pelanggan (1 untuk ToyyibPay, 2 untuk QR Code)."""
     bank = get_bank_details()
     toyyib = get_toyyibpay_link()
@@ -68,13 +68,12 @@ def get_payment_instructions_text(pilihan):
             "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
         )
     else:
-        # Fallback jika pilihan tidak dikenal pasti
+        # Fallback jika pilihan belum dibuat atau tidak dikenal pasti
         return (
-            "Orite, tq bos! Ni pilihan cara bayar yang senang:\n\n"
-            f"• Online Banking (ToyyibPay): {toyyib}\n"
-            f"• QR Code DuitNow: {qr_link}\n"
-            f"• Transfer/CDM: {bank['bank']} - {bank['no_akaun']} ({bank['nama_pemegang_akaun']})\n\n"
-            "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
+            "Orite, tq bos! Nak bayar guna cara mane ye?\n\n"
+            "1️⃣ *Online Banking (ToyyibPay)*\n"
+            "2️⃣ *QR Code DuitNow*\n\n"
+            "Sila balas pilihan *1* atau *2* ya k."
         )
 
 def format_admin_notification(booking_details):
