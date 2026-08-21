@@ -48,7 +48,9 @@ def whatsapp_webhook():
                             user_message = message.get("text", {}).get("body", "")
                             
                             if phone_number and user_message:
+                                print(f"Processing message from {phone_number}: {user_message}")
                                 zulfa_reply = zulfa_brain.proses_mesej(user_message, phone_number)
+                                print(f"Generated reply: {zulfa_reply}")
                                 send_whatsapp_message(phone_number, zulfa_reply)
 
         return jsonify({"status": "success"}), 200
@@ -69,6 +71,8 @@ def send_whatsapp_message(recipient_phone, message_text):
         "text": {"body": message_text}
     }
     response = requests.post(url, json=payload, headers=headers)
+    print(f"WhatsApp API Response Status: {response.status_code}")
+    print(f"WhatsApp API Response Body: {response.text}")
     return response.json()
 
 if __name__ == "__main__":
