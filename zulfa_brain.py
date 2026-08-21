@@ -231,7 +231,7 @@ def get_full_system_prompt(phone_number):
 def proses_mesej(mesej_masuk, phone_number="60172364060"):
     try:
         model = genai.GenerativeModel(
-            model_name="gemini-2.5-flash",
+            model_name="gemini-3.5-flash-lite",
             system_instruction=get_full_system_prompt(phone_number)
         )
         response = model.generate_content(mesej_masuk)
