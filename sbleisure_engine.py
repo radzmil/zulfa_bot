@@ -144,6 +144,13 @@ def bundar_ke_puluhan_atas(nilai):
 def kira_harga_kenderaan_sbleisure(jenis_kenderaan="bas", jenis_transfer="one_way", lokasi_ambil="ampang", jarak_km=0, tarikh_pergi=None, tarikh_balik=None, pilihan_deposit=50):
     jenis_kenderaan = jenis_kenderaan.strip().lower()
     
+    # KEMASKINI: Hanya Bas sahaja dibenarkan untuk tempahan online
+    if jenis_kenderaan != "bas":
+        return {
+            "status": "rujuk_sales",
+            "mesej": f"Maaf, untuk tempahan {jenis_kenderaan.upper()}, sistem tidak boleh ambil tempahan terus. Sila berhubung terus dengan team sales kami untuk tempahan kenderaan ini: https://wa.link/nrmesv"
+        }
+    
     if jenis_kenderaan == "tour":
         return {
             "status": "rujuk_sales",
