@@ -680,6 +680,6 @@ def proses_mesej(mesej_masuk, phone_number="601123456789"):
         
         save_customer_memory(phone_number, mesej_masuk, teks_balasan)
         return teks_balasan
-    except Exception as e:
+   except Exception as e:
         print(f"Error in proses_mesej: {e}")
         return "Eh maaf Encik/Puan, line slow pulak tadi. Ada yang Zulfa boleh bantu?"
