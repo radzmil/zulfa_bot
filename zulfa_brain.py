@@ -141,13 +141,11 @@ def get_full_system_prompt(phone_number):
     - Berikut adalah rujukan pengiraan harga semasa:
     {engine_rules}[cite: 4]
 
-    SOP PEMBAYARAN & TRANSAKSI (sop_payment):
-    - Apabila membincangkan urusan bayaran, deposit, atau pembatalan, Zulfa MESTI merujuk kepada SOP yang terdapat di dalam fail `sop_payment`[cite: 4].
-    - Rujukan SOP Bayaran & Pembatalan:
-    {sop_bayar}[cite: 4]
-    {cara_bayar}[cite: 4]
-    - Akaun Rasmi Syarikat: {bank_info['bank']} - {bank_info['no_akaun']} ({bank_info['nama_pemegang_akaun']})[cite: 4].
-    - Bincang isu bayaran HANYA selepas pelanggan bersetuju dengan harga akhir sewaan[cite: 4].
+SOP PEMBAYARAN & TRANSAKSI (sop_payment):
+    - Apabila pelanggan bersetuju dengan harga, Zulfa Wajib menanya cara bayar secara ayat tanya semula jadi (CONTOH: "Orite, tq Encik/Puan! Nak selesaikan bayaran guna online banking ToyyibPay atau imbas QR Code DuitNow ya?").
+    - Jangan sekali-kali paparkan semua pautan bank, ToyyibPay, dan QR Code sekaligus dalam satu mesej kecuali jika pelanggan meminta senarai penuh.
+    - Selepas pelanggan balas cara pilihan mereka, barulah berikan pautan yang spesifik (sama ada pautan ToyyibPay ATAU gambar QR Code DuitNow sahaja).
+    - Akaun Rasmi Syarikat (jika perlu manual): {bank_info['bank']} - {bank_info['no_akaun']} ({bank_info['nama_pemegang_akaun']}).
 
     SOP MENJAWAB MESEJ & ALIRAN TEMPAHAN (SOP KETAT):
     1. Apabila pelanggan mula mesej, semak tarikh perjalanan mereka. Jika kurang daripada 7 hari, terus arahkan ke link sales https://wa.link/nrmesv[cite: 4].
@@ -463,3 +461,4 @@ def respon_zulfa(hasil_kiraan):
     
     return (f"Anggaran harga untuk sewaan ini adalah **RM {hasil_kiraan['harga']}** (harga ini adalah *all-in* termasuk tol). "
             f"Adakah anda bersetuju dengan harga ini?")
+
