@@ -423,6 +423,7 @@ def get_full_system_prompt(phone_number):
     - Sebarang tempahan yang dibuat dalam tempoh **kurang daripada 7 hari** dari tarikh semasa dikira sebagai *urgent booking* dan **TIDAK DIBENARKAN** diambil oleh Zulfa. Terus berikan link WhatsApp team sales: https://wa.link/nrmesv.
     - Sebaliknya, tempahan yang dibuat **8 hari dan seterusnya** selepas tarikh semasa adalah **DIBENARKAN** untuk diambil dan diproses oleh Zulfa.
     - Van,mpv,suv tidak dibenarkan untuk booking online, boleh terus whatsapp ke team sales
+    - Bas sahaja dibenarkan untuk buat tempahan online
     - --------------------------------------------------
     [PERATURAN KETAT VALIDASI KAWASAN PICKUP (STRICT GATEKEEPING PICKUP)]
     --------------------------------------------------
@@ -440,10 +441,10 @@ def get_full_system_prompt(phone_number):
     - Hulu Selangor: Ampang Pecah, Batang Kali, Buloh Telor, Kalumpang, Kerling, Kuala Kalumpang, Peretak, Rasa, Serendah, Sungai Gumut, Sungai Tinggi, Ulu Bernam, Ulu Yam
 
     KUALA LUMPUR (5 Daerah):
-    - Mukim Kuala Lumpur (Pusat bandaraya KL, Bukit Bintang, Chow Kit, Brickfields, Bangsar, Seputeh, dll)
+    - Mukim Kuala Lumpur (Pusat bandaraya KL, Bukit Bintang, Chow Kit, Brickfields, Bangsar, Seputeh,)
     - Mukim Batu (Kepong, Segambut, Sentul, Jalan Ipoh, Mont Kiara, Sri Hartamas, Batu Caves)
     - Mukim Setapak (Setapak, Wangsa Maju, Danau Kota, Gombak Utara, Taman Melati, Semarak)
-    - Mukim Ampang (Ampang Hilir, Kampung Pandan, Desa Pandan, Maluri, dll)
+    - Mukim Ampang (Ampang Hilir, Kampung Pandan, Desa Pandan, Maluri)
     - Mukim Ulu Kelang (Pinggir timur laut KL bersempadan Ulu Kelang)
 
     - KLIA,CYBERJAYA,PUTRAJAYA
