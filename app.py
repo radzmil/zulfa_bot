@@ -9,7 +9,7 @@ app = Flask(__name__)
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_ID")
 
-def send_whatsapp_message(to_phone, message_text):
+def send_whatsapp_message(to_phone, message_text, image_url=None):
     if not WHATSAPP_TOKEN or not PHONE_NUMBER_ID:
         print("WhatsApp token atau Phone Number ID tidak dijumpai dalam environment variables.")
         return
@@ -19,18 +19,31 @@ def send_whatsapp_message(to_phone, message_text):
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": to_phone,
-        "type": "text",
-        "text": {"body": message_text}
-    }
+    
+    # Jika ada pautan imej QR, hantar jenis mesej 'image'
+    if image_url:
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_phone,
+            "type": "image",
+            "image": {
+                "link": image_url,
+                "caption": message_text
+            }
+        }
+    else:
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": to_phone,
+            "type": "text",
+            "text": {"body": message_text}
+        }
     
     response = requests.post(url, json=payload, headers=headers)
     if response.status_code != 200:
-        print(f"Gagal menghantar mesej WhatsApp: {response.text}")
+        print(f"Gagal menghantar mesej/imej WhatsApp: {response.text}")
     else:
-        print(f"Mesej berjaya dihantar kepada {to_phone}")
+        print(f"Mesej/Imej berjaya dihantar kepada {to_phone}")
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
@@ -61,7 +74,6 @@ def webhook():
                 if messages:
                     msg = messages[0]
                     phone_number = msg.get("from")
-                    # Ralat sintaks dibetulkan di sini (dibuang rujukan luaran)
                     msg_body = msg.get("text", {}).get("body", "")
                     
                     if msg_body:
@@ -69,8 +81,14 @@ def webhook():
                         balasan = zulfa_brain.proses_mesej(msg_body, phone_number)
                         print(f"Zulfa Response: {balasan}")
                         
-                        # 2. Hantar balasan kepada pelanggan
-                        send_whatsapp_message(phone_number, balasan)
+                        # 2. Semak sama ada balasan mengandungi pautan QR Code
+                        qr_link = sop_payment.get_qr_code_link()[cite: 1]
+                        if qr_link in balasan:
+                            #asingkan teks penerangan daripada pautan imej
+                            teks_bersih = balasan.replace(qr_link, "").strip()
+                            send_whatsapp_message(phone_number, teks_bersih, image_url=qr_link)
+                        else:
+                            send_whatsapp_message(phone_number, balasan)
                         
                         # 3. Ambil nombor admin terkini daripada sop_payment
                         admin_phone = sop_payment.get_group_admin_number()
@@ -81,7 +99,6 @@ def webhook():
                         is_booking_form = "BORANG MAKLUMAT SEWAAN" in msg_body.upper() or ("PICK-UP POINT" in msg_body.upper() and "TARIKH" in msg_body.upper())
                         
                         if admin_phone and (is_payment_message or is_booking_form):
-                            # Bina data lengkap untuk dihantar kepada admin menggunakan fungsi dari sop_payment
                             booking_data = {
                                 "ref_id": f"REF-{phone_number[-4:]}",
                                 "nama": f"Pelanggan ({phone_number})",
@@ -92,13 +109,9 @@ def webhook():
                                 "status_bayaran": "MENUNGGU SAHAN ADMIN (Resit/Borang Diterima)"
                             }
                             
-                            # Formatkan mesej notifikasi rasmi untuk admin
                             notif_admin = sop_payment.format_admin_notification(booking_data)
-                            
-                            # Tambah teks asal pelanggan supaya admin dapat lihat butiran borang/resit secara tepat
                             notif_admin += f"\n\n📝 *MAKLUMAT / MESEJ TERKINI DARI PELANGGAN:*\n{msg_body}"
                             
-                            # Hantar terus ke nombor admin
                             send_whatsapp_message(admin_phone, notif_admin)
                             print(f"Notifikasi terperinci berjaya dihantar kepada Admin: {admin_phone}")
                         
