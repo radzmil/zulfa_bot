@@ -9,9 +9,9 @@ load_dotenv()
 
 app = Flask(__name__)
 
-VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "sbleisure_secure_token")
+VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "sbleisure_secure_token")
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_ID")  # Dikemaskini selari dengan Railway
+PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_ID")
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
@@ -31,27 +31,27 @@ def verify_webhook():
 def whatsapp_webhook():
     try:
         body = request.get_json()
-        print("Webhook received:", body)
+        print("Webhook received:", body)[cite: 2]
         
         if body.get("object") == "whatsapp_business_account":
             for entry in body.get("entry", []):
                 for change in entry.get("changes", []):
                     value = change.get("value", {})
-                    messages = value.get("messages", [])
                     
-                    if messages:
-                        message = messages[0]
-                        # Meta Cloud API letak nombor pengirim dalam key 'from' di peringkat objek message
-                        phone_number = message.get("from") 
-                        
-                        if message.get("type") == "text":
-                            user_message = message.get("text", {}).get("body", "")
+                    if "messages" in value:
+                        messages = value.get("messages", [])
+                        if messages:
+                            message = messages[0]
+                            phone_number = message.get("from")[cite: 2]
                             
-                            if phone_number and user_message:
-                                print(f"Processing message from {phone_number}: {user_message}")
-                                zulfa_reply = zulfa_brain.proses_mesej(user_message, phone_number)
-                                print(f"Generated reply: {zulfa_reply}")
-                                send_whatsapp_message(phone_number, zulfa_reply)
+                            if message.get("type") == "text":
+                                user_message = message.get("text", {}).get("body", "")
+                                
+                                if phone_number and user_message:
+                                    print(f"Processing message from {phone_number}: {user_message}")[cite: 2]
+                                    zulfa_reply = zulfa_brain.proses_mesej(user_message, phone_number)
+                                    print(f"Generated reply: {zulfa_reply}")[cite: 2]
+                                    send_whatsapp_message(phone_number, zulfa_reply)
 
         return jsonify({"status": "success"}), 200
     except Exception as e:
@@ -71,8 +71,8 @@ def send_whatsapp_message(recipient_phone, message_text):
         "text": {"body": message_text}
     }
     response = requests.post(url, json=payload, headers=headers)
-    print(f"WhatsApp API Response Status: {response.status_code}")
-    print(f"WhatsApp API Response Body: {response.text}")
+    print(f"WhatsApp API Response Status: {response.status_code}")[cite: 2]
+    print(f"WhatsApp API Response Body: {response.text}")[cite: 2]
     return response.json()
 
 if __name__ == "__main__":
