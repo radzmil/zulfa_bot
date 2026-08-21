@@ -1,6 +1,15 @@
 # zulfa_brain.py
 from datetime import datetime
 import pytz
+import os
+import google.generativeai as genai
+from dotenv import load_dotenv
+
+# Muat naik pembolehubah persekitaran dari .env
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
 
 ZULFA_IDENTITY = {
     "nama_penuh": "Zulfa Jamaludin",
@@ -35,7 +44,6 @@ def get_zulfa_identity():
     """
 
 def get_time_vibe():
-    # Tetapkan zon masa Malaysia
     malaysia_tz = pytz.timezone('Asia/Kuala_Lumpur')
     hour = datetime.now(malaysia_tz).hour
     
@@ -81,3 +89,15 @@ def get_full_system_prompt():
     
     {get_power_sales_copywriting()}
     """
+
+def proses_mesej(mesej_masuk):
+    try:
+        # Menggunakan model gemini-3.5-flash-lite untuk kelajuan terpantas & jimat kos
+        model = genai.GenerativeModel(
+            model_name="gemini-3.5-flash-lite",
+            system_instruction=get_full_system_prompt()
+        )
+        response = model.generate_content(mesej_masuk)
+        return response.text
+    except Exception as e:
+        return f"Eh maaf bos, Zulfa terlekat sikit tadi ({e}). Ada apa yang boleh Zulfa bantu pasal sewaan bas SBLEISURE hari ni?"
