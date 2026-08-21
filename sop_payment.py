@@ -39,18 +39,43 @@ def get_payment_and_cancellation_sop_text():
         "5. Nota Penting: Deposit adalah untuk menahan tarikh. Jika tarikh dibatalkan, deposit tidak dikembalikan."
     )
 
-def get_payment_instructions_text():
-    """Format teks pilihan cara bayar kepada pelanggan."""
+def get_payment_method_prompt():
+    """Menanya pelanggan pilihan cara pembayaran mereka."""
+    return (
+        "Orite, tq bos! Nak bayar guna cara mane ye?\n\n"
+        "1️⃣ *Online Banking (ToyyibPay)*\n"
+        "2️⃣ *QR Code DuitNow*\n\n"
+        "Sila balas pilihan *1* atau *2* ya k."
+    )
+
+def get_payment_instructions_text(pilihan):
+    """Format teks pilihan cara bayar mengikut pilihan pelanggan (1 untuk ToyyibPay, 2 untuk QR Code)."""
     bank = get_bank_details()
     toyyib = get_toyyibpay_link()
     qr_link = get_qr_code_link()
-    return (
-        "Orite, tq bos! Ni cara bayar yang senang:\n\n"
-        f"• ToyyibPay: {toyyib}\n"
-        f"• QR DuitNow: {qr_link}\n"
-        f"• Transfer/CDM: {bank['bank']} - {bank['no_akaun']} ({bank['nama_pemegang_akaun']})\n\n"
-        "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
-    )
+    
+    if str(pilihan) == "1" or "online" in str(pilihan).lower() or "toyyibpay" in str(pilihan).lower():
+        return (
+            "Baik bos! Sila buat pembayaran melalui pautan Online Banking ToyyibPay di bawah:\n\n"
+            f"🔗 {toyyib}\n\n"
+            "Dah setel nanti, rojer hantar gambar resit kat Zulfa k."
+        )
+    elif str(pilihan) == "2" or "qr" in str(pilihan).lower():
+        return (
+            "Baik bos! Sila scan QR Code DuitNow di bawah untuk pembayaran:\n\n"
+            f"🖼️ {qr_link}\n\n"
+            f"Atau transfer manual ke: {bank['bank']} - {bank['no_akaun']} ({bank['nama_pemegang_akaun']})\n\n"
+            "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
+        )
+    else:
+        # Fallback jika pilihan tidak dikenal pasti
+        return (
+            "Orite, tq bos! Ni pilihan cara bayar yang senang:\n\n"
+            f"• Online Banking (ToyyibPay): {toyyib}\n"
+            f"• QR Code DuitNow: {qr_link}\n"
+            f"• Transfer/CDM: {bank['bank']} - {bank['no_akaun']} ({bank['nama_pemegang_akaun']})\n\n"
+            "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
+        )
 
 def format_admin_notification(booking_details):
     """Format mesej butiran tempahan yang siap dibayar untuk dihantar ke GROUP_ADMIN_NUMBER."""
