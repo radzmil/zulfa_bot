@@ -5,7 +5,6 @@ import zulfa_brain
 
 app = Flask(__name__)
 
-# Tetapan token dan nombor ID telefon WhatsApp Cloud API daripada environment variables
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
 
@@ -34,7 +33,6 @@ def send_whatsapp_message(to_phone, message_text):
 
 @app.route("/webhook", methods=["GET"])
 def verify_webhook():
-    # Untuk pengesahan webhook dengan Meta (jika perlu)
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
@@ -51,7 +49,7 @@ def verify_webhook():
 def webhook():
     try:
         data = request.get_json()
-        print(f"Webhook received: {data}")[cite: 6]
+        print(f"Webhook received: {data}")
         
         entry = data.get("entry", [])
         if entry:
@@ -61,21 +59,18 @@ def webhook():
                 messages = value.get("messages", [])
                 if messages:
                     msg = messages[0]
-                    phone_number = msg.get("from")[cite: 6]
-                    msg_body = msg.get("text", {}).get("body", "")[cite: 6]
+                    phone_number = msg.get("from")
+                    msg_body = msg.get("text", {}).get("body", "")
                     
                     if msg_body:
-                        # Panggil fungsi dari zulfa_brain.py
-                        balasan = zulfa_brain.proses_mesej(msg_body, phone_number)[cite: 6]
-                        print(f"Zulfa Response: {balasan}")[cite: 6]
-                        
-                        # Hantar semula jawapan kepada WhatsApp pengguna
+                        balasan = zulfa_brain.proses_mesej(msg_body, phone_number)
+                        print(f"Zulfa Response: {balasan}")
                         send_whatsapp_message(phone_number, balasan)
                         
-        return jsonify({"status": "success"}), 200[cite: 6]
+        return jsonify({"status": "success"}), 200
     except Exception as e:
-        print(f"Error webhook: {e}")[cite: 6]
-        return jsonify({"status": "error", "message": str(e)}), 500[cite: 6]
+        print(f"Error webhook: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)[cite: 6]
+    app.run(host="0.0.0.0", port=5000)
