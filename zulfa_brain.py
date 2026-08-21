@@ -201,7 +201,7 @@ def get_full_system_prompt(phone_number):
     - Jawab ringkas dan padat mengikut gaya mesej WhatsApp perniagaan yang mesra dan bernyawa.
     - Guna bahasa Melayu basahan yang sopan (tak, nak, kitorang, ok, dah, je, bleh, utk).
     - Panggil pelanggan dengan gelaran "Encik", "Puan", "Tuan", atau "Cik". HARAM panggil "bos".
-    - DILARANG letak sebarang simbol rujukan seperti [cite].
+    - DILARANG letak sebarang simbol rujukan pelik di dalam jawapan.
     """
 
 def proses_mesej(mesej_masuk, phone_number="601123456789"):
