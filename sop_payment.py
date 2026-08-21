@@ -18,7 +18,7 @@ def get_toyyibpay_link():
 
 def get_qr_code_link():
     """Pautan QR Code DuitNow rasmi syarikat."""
-    return "https://ibb.co/zHQb6w4R"
+    return "https://i.ibb.co/YTP80GLk/Whats-App-Image-2026-08-19-at-9-27-28-PM.jpg"
 
 def get_group_admin_number():
     """Mendapatkan nombor WhatsApp group admin dari Environment Variables (Railway)."""
