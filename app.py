@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify
 import os
 import requests
+import hashlib
 from dotenv import load_dotenv
 import sbleisure_profile
 import sbleisure_engine
 import zulfa_brain
+import sop_payment
 from sbleisure_engine import kira_harga_kenderaan_sbleisure, respon_zulfa, paparkan_terma_dan_syarat, paparkan_borang
 
 load_dotenv()
@@ -13,6 +15,7 @@ app = Flask(__name__)
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
 WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID")
 VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "sbleisure_secure_token")
+TOYYIBPAY_SECRET_KEY = "ct48pm53-ijta-7aq5-h0bc-hy1w37c9s4h2"
 
 @app.route("/")
 def home():
@@ -43,13 +46,10 @@ def webhook():
                     value = change.get("value", {})
                     if "messages" in value:
                         msg = value["messages"][0]
-                        nombor_sender = msg["from"] # Nombor telefon penerima
-                        teks_mesej = msg["text"]["body"] # Teks mesej masuk
+                        nombor_sender = msg["from"]
+                        teks_mesej = msg["text"]["body"]
                         
-                        # Dapatkan jawapan pintar daripada Zulfa Brain (Gemini)
                         jawapan_zulfa = zulfa_brain.proses_mesej(teks_mesej)
-                        
-                        # Hantar semula jawapan ke WhatsApp melalui Meta Cloud API
                         kirim_whatsapp(nombor_sender, jawapan_zulfa)
                         
         return jsonify({"status": "received"}), 200
@@ -57,8 +57,41 @@ def webhook():
         print(f"Error webhook: {e}")
         return jsonify({"status": "error"}), 500
 
+# 3. ToyyibPay Callback Webhook (Auto-Ping bila customer bayar)
+@app.route("/toyyibpay-callback", methods=["POST"])
+def toyyibpay_callback():
+    try:
+        data = request.form.to_dict() or request.json or {}
+        
+        status = str(data.get('status') or data.get('status_id') or '')
+        order_id = str(data.get('order_id') or '')
+        refno = str(data.get('refno') or '')
+        received_hash = str(data.get('hash') or '')
+        nama_customer = data.get('name') or data.get('customer_name', 'Pelanggan')
+        billcode = data.get('billcode') or order_id
+        
+        # Validasi Hash ToyyibPay
+        raw_string = TOYYIBPAY_SECRET_KEY + status + order_id + refno + "ok"
+        expected_hash = hashlib.md5(raw_string.encode('utf-8')).hexdigest()
+        
+        if received_hash == expected_hash and (status == '1' or status.lower() == 'success'):
+            booking_info = {
+                "ref_id": billcode,
+                "nama": nama_customer,
+                "status_bayaran": "PAID ONLINE (ToyyibPay Secure Verified)"
+            }
+            
+            pesanan_admin = sop_payment.format_admin_notification(booking_info)
+            kirim_whatsapp(sop_payment.get_group_admin_number(), pesanan_admin)
+            
+            return jsonify({"status": "success", "message": "Hash valid, admin telah di-ping."}), 200
+        else:
+            return jsonify({"status": "invalid_hash_or_failed", "message": "Hash tidak sepadan atau bayaran belum berjaya."}), 400
+            
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 def kirim_whatsapp(nombor_tujuan, mesej_teks):
-    """Fungsi untuk menghantar mesej teks kembali ke WhatsApp pengguna"""
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_ID}/messages"
     headers = {
         "Authorization": f"Bearer {WHATSAPP_TOKEN}",
@@ -79,22 +112,14 @@ def kirim_whatsapp(nombor_tujuan, mesej_teks):
 @app.route("/kira", methods=["POST"])
 def kira_harga():
     data = request.json
-    kenderaan = data.get("kenderaan", "bas")
-    transfer = data.get("transfer", "one_way")
-    lokasi = data.get("lokasi", "ampang")
-    jarak = data.get("jarak", 0)
-    t_pergi = data.get("tarikh_pergi")
-    t_balik = data.get("tarikh_balik")
-    
     hasil = kira_harga_kenderaan_sbleisure(
-        jenis_kenderaan=kenderaan,
-        jenis_transfer=transfer,
-        lokasi_ambil=lokasi,
-        jarak_km=jarak,
-        tarikh_pergi=t_pergi,
-        tarikh_balik=t_balik
+        jenis_kenderaan=data.get("kenderaan", "bas"),
+        jenis_transfer=data.get("transfer", "one_way"),
+        lokasi_ambil=data.get("lokasi", "ampang"),
+        jarak_km=data.get("jarak", 0),
+        tarikh_pergi=data.get("tarikh_pergi"),
+        tarikh_balik=data.get("tarikh_balik")
     )
-    
     respon = respon_zulfa(hasil)
     return jsonify({"status": hasil["status"], "mesej": respon, "data_harga": hasil})
 
