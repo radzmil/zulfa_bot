@@ -3,8 +3,7 @@ from datetime import datetime
 import pytz
 import os
 import json
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 from dotenv import load_dotenv
 import sbleisure_engine
 import sbleisure_profile
@@ -12,9 +11,8 @@ import sop_payment
 
 load_dotenv()
 api_key = os.getenv("GEMINI_API_KEY")
-
-# Menggunakan client baharu untuk Google GenAI
-client = genai.Client(api_key=api_key) if api_key else None
+if api_key:
+    genai.configure(api_key=api_key)
 
 MEMORY_FILE = "zulfa_customers_memory.json"
 
@@ -113,17 +111,13 @@ def get_full_system_prompt(phone_number):
 
 def proses_mesej(mesej_masuk, phone_number="601123456789"):
     try:
-        if not client:
-            return "Maaf Encik/Puan, ralat konfigurasi API key."[cite: 6]
-            
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=mesej_masuk,
-            config=types.GenerateContentConfig(
-                system_instruction=get_full_system_prompt(phone_number),
-            ),
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=get_full_system_prompt(phone_number)
         )
+        response = model.generate_content(mesej_masuk)
         teks_balasan = response.text
+        
         save_customer_memory(phone_number, mesej_masuk, teks_balasan)
         return teks_balasan
     except Exception as e:
