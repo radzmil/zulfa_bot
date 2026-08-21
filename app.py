@@ -7,7 +7,7 @@ import sbleisure_profile
 import sbleisure_engine
 import zulfa_brain
 import sop_payment
-from sbleisure_engine import kira_harga_kenderaan_sbleisure, respon_zulfa, paparkan_terma_dan_syarat, paparkan_borang[cite: 2]
+from sbleisure_engine import kira_harga_kenderaan_sbleisure, respon_zulfa, paparkan_terma_dan_syarat, paparkan_borang
 
 load_dotenv()
 app = Flask(__name__)
@@ -19,7 +19,7 @@ TOYYIBPAY_SECRET_KEY = "ct48pm53-ijta-7aq5-h0bc-hy1w37c9s4h2"
 
 @app.route("/")
 def home():
-    return "SBLEISURE Bot Server is running smoothly, bosku! Zulfa is ready."[cite: 2]
+    return "SBLEISURE Bot Server is running smoothly. Zulfa is ready."
 
 # 1. Pengesahan Webhook untuk Meta (WhatsApp Cloud API)
 @app.route("/webhook", methods=["GET"])
@@ -33,7 +33,7 @@ def verify_webhook():
             return challenge, 200
         else:
             return "Verification failed", 403
-    return "Hello, this is SBLEISURE Webhook endpoint", 200[cite: 2]
+    return "Hello, this is SBLEISURE Webhook endpoint", 200
 
 # 2. Penerima Mesej Masuk & Hantar Balik ke WhatsApp (Diasingkan ikut nombor customer)
 @app.route("/webhook", methods=["POST"])
@@ -56,7 +56,7 @@ def webhook():
         return jsonify({"status": "received"}), 200
     except Exception as e:
         print(f"Error webhook: {e}")
-        return jsonify({"status": "error"}), 500[cite: 2]
+        return jsonify({"status": "error"}), 500
 
 # 3. ToyyibPay Callback Webhook (Auto-Ping bila customer bayar)
 @app.route("/toyyibpay-callback", methods=["POST"])
@@ -90,7 +90,7 @@ def toyyibpay_callback():
             return jsonify({"status": "invalid_hash_or_failed", "message": "Hash tidak sepadan atau bayaran belum berjaya."}), 400
             
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500[cite: 2]
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 def kirim_whatsapp(nombor_tujuan, mesej_teks):
     url = f"https://graph.facebook.com/v17.0/{WHATSAPP_PHONE_ID}/messages"
@@ -108,7 +108,7 @@ def kirim_whatsapp(nombor_tujuan, mesej_teks):
         response = requests.post(url, json=payload, headers=headers)
         return response.json()
     except Exception as e:
-        print(f"Gagal hantar WhatsApp: {e}")[cite: 2]
+        print(f"Gagal hantar WhatsApp: {e}")
 
 @app.route("/kira", methods=["POST"])
 def kira_harga():
@@ -122,17 +122,17 @@ def kira_harga():
         tarikh_balik=data.get("tarikh_balik")
     )
     respon = respon_zulfa(hasil)
-    return jsonify({"status": hasil["status"], "mesej": respon, "data_harga": hasil})[cite: 2]
+    return jsonify({"status": hasil["status"], "mesej": respon, "data_harga": hasil})
 
 @app.route("/terma", methods=["GET"])
 def get_terma():
-    return jsonify({"terma": paparkan_terma_dan_syarat()})[cite: 2]
+    return jsonify({"terma": paparkan_terma_dan_syarat()})
 
 @app.route("/borang", methods=["POST"])
 def get_borang():
     data = request.json
     transfer = data.get("transfer", "one_way")
-    return jsonify({"borang": paparkan_borang(transfer)})[cite: 2]
+    return jsonify({"borang": paparkan_borang(transfer)})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)[cite: 2]
+    app.run(host="0.0.0.0", port=5000)
