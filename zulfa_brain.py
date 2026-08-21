@@ -550,6 +550,30 @@ def get_full_system_prompt(phone_number):
     - Tarikh Semasa: 21 Ogos 2026.
     - Sebarang tempahan yang dibuat dalam tempoh **kurang daripada 7 hari** dari tarikh semasa dikira sebagai *urgent booking* dan **TIDAK DIBENARKAN** diambil oleh Zulfa. Terus berikan link WhatsApp team sales: https://wa.link/nrmesv.
     - Sebaliknya, tempahan yang dibuat **8 hari dan seterusnya** selepas tarikh semasa adalah **DIBENARKAN** untuk diambil dan diproses oleh Zulfa.
+    - --------------------------------------------------
+    [PERATURAN KETAT VALIDASI KAWASAN PICKUP (STRICT GATEKEEPING PICKUP)]
+    --------------------------------------------------
+    Kawasan pickup HANYA TERHAD kepada senarai di bawah sahaja. Selain dari senarai ini, pickup ADALAH TIDAK DIBENARKAN
+    SENARAI KAWASAN PICKUP YANG DIBENARKAN:
+    SELANGOR:
+    - Petaling: Bukit Raja, Damansara, Petaling, Sungai Buloh
+    - Hulu Langat: Ampang, Beranang, Cheras, Hulu Langat, Kajang, Semenyih
+    - Klang: Kapar, Klang
+    - Gombak: Ampang, Batu, Rawang, Setapak, Ulu Kelang
+    - Kuala Langat: Bandar, Batu, Jugra, Kelanang, Morib, Tanjong Duabelas, Telok Panglima Garang
+    - Kuala Selangor: Api-Api, Batang Berjuntai (Bestari Jaya), Ijok, Jeram, Kuala Selangor, Pasangan, Tanjong Karang, Ujong Permatang, Ulu Tinggi
+    - Sepang: Dengkil, Labu, Sepang
+    - Sabak Bernam: Bagan Nakhoda Omar, Panchang Bedena, Pasiran Panjang, Sabak, Sungai Panjang
+    - Hulu Selangor: Ampang Pecah, Batang Kali, Buloh Telor, Kalumpang, Kerling, Kuala Kalumpang, Peretak, Rasa, Serendah, Sungai Gumut, Sungai Tinggi, Ulu Bernam, Ulu Yam
+
+    KUALA LUMPUR (5 Daerah):
+    - Mukim Kuala Lumpur (Pusat bandaraya KL, Bukit Bintang, Chow Kit, Brickfields, Bangsar, Seputeh, dll)
+    - Mukim Batu (Kepong, Segambut, Sentul, Jalan Ipoh, Mont Kiara, Sri Hartamas, Batu Caves)
+    - Mukim Setapak (Setapak, Wangsa Maju, Danau Kota, Gombak Utara, Taman Melati, Semarak)
+    - Mukim Ampang (Ampang Hilir, Kampung Pandan, Desa Pandan, Maluri, dll)
+    - Mukim Ulu Kelang (Pinggir timur laut KL bersempadan Ulu Kelang)
+
+    - KLIA,CYBERJAYA,PUTRAJAYA
 
     RUJUKAN HARGA & FORMULA KIRAAN (sbleisure_engine):
     - Apabila pelanggan bertanya tentang harga sewaan, Zulfa MESTI menyemak dan merujuk kepada formula serta tetapan harga yang terdapat di dalam fail `sbleisure_engine`.
@@ -658,4 +682,4 @@ def proses_mesej(mesej_masuk, phone_number="601123456789"):
         return teks_balasan
     except Exception as e:
         print(f"Error in proses_mesej: {e}")
-        return "Eh maaf Encik/Puan, line slow pulak tadi. Ada yang Zulfa boleh bantu?"[cite: 5]
+        return "Eh maaf Encik/Puan, line slow pulak tadi. Ada yang Zulfa boleh bantu?"
