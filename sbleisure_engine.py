@@ -8,7 +8,7 @@ from datetime import datetime
 def paparkan_terma_dan_syarat():
     """Memaparkan terma dan syarat rasmi syarikat untuk dibaca pelanggan"""
     return (
-        "📜 **SYARAT PEMBAYARAN & PEMBATALAN - DEPOSIT 50%**\n\n"
+        "糖 **SYARAT PEMBAYARAN & PEMBATALAN - DEPOSIT 50%**\n\n"
         "**1. Pembayaran**\n"
         "   - Deposit 50%: Diperlukan untuk lock tarikh & bas selepas quotation dihantar untuk pengesahan tempahan.\n"
         "   - Baki 50%: Mesti dijelaskan penuh 2 hari sebelum tarikh perjalanan.\n\n"
@@ -23,23 +23,55 @@ def paparkan_terma_dan_syarat():
         "   Deposit + Baki yang telah dibayar akan dikembalikan 100% dalam 7 hari bekerja.\n\n"
         "**5. Nota Penting**\n"
         "   Deposit adalah untuk menahan tarikh. Jika tarikh dibatalkan, kami rugi peluang job lain. Oleh itu deposit tidak dikembalikan.\n\n"
-        "👉 *Adakah bos bersetuju dengan Terma & Syarat di atas? (Sila balas 'Setuju' untuk meneruskan tempahan)*"
+        "痩 *Adakah bos bersetuju dengan Terma & Syarat di atas? (Sila balas 'Setuju' untuk meneruskan tempahan)*"
     )
 
 
 # ==========================================
-# 2. MODUL VALIDASI & BORANG
+# 2. MODUL VALIDASI & BORANG (DENGAN GATEKEEPING KETAT)
 # ==========================================
 
 def validasi_pickup(lokasi):
-    """Menyemak zon pickup dan memberikan harga asas"""
+    """Menyemak zon pickup mengikut senarai kawasan yang dibenarkan sahaja"""
     lokasi = lokasi.strip().lower()
     
-    if any(z in lokasi for z in ["klia", "cyberjaya", "putrajaya", "airport"]):
-        return True, 800.00
-    elif any(z in lokasi for z in ["ampang", "kl", "kuala lumpur", "selangor", "cheras", "gombak"]):
-        return True, 700.00
-        
+    # Senarai zon yang dibenarkan (Selangor & Kuala Lumpur)
+    senarai_dibenarkan = [
+        # Selangor - Petaling
+        "bukit raja", "damansara", "petaling", "sungai buloh",
+        # Selangor - Hulu Langat
+        "ampang", "beranang", "cheras", "hulu langat", "kajang", "semenyih",
+        # Selangor - Klang
+        "kapar", "klang",
+        # Selangor - Gombak
+        "batu", "rawang", "setapak", "ulu kelang",
+        # Selangor - Kuala Langat
+        "bandar", "jugra", "kelanang", "morib", "tanjong duabelas", "telok panglima garang",
+        # Selangor - Kuala Selangor
+        "api-api", "batang berjuntai", "bestari jaya", "ijok", "jeram", "kuala selangor", "pasangan", "tanjong karang", "ujong permatang", "ulu tinggi",
+        # Selangor - Sepang
+        "dengkil", "labu", "sepang",
+        # Selangor - Sabak Bernam
+        "bagan nakhoda omar", "panchang bedena", "pasiran panjang", "sabak", "sungai panjang",
+        # Selangor - Hulu Selangor
+        "ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam",
+        # Kuala Lumpur
+        "kuala lumpur", "pusat bandar", "bukit bintang", "chow kit", "brickfields", "bangsar", "seputehe",
+        "kepong", "segambut", "sentul", "jalan ipoh", "mont kiara", "sri hartamas", "batu caves",
+        "wangsa maju", "danau kota", "taman melati", "semarak",
+        "ampang hilir", "kampung pandan", "desa pandan", "maluri"
+    ]
+    
+    # Semak sama ada lokasi mengandungi mana-mana zon yang dibenarkan
+    ditemui = any(zon in lokasi for zon in senarai_dibenarkan)
+    
+    if ditemui:
+        # Tentukan harga asas berdasarkan zon utama
+        if any(z in lokasi for z in ["klia", "cyberjaya", "putrajaya", "airport"]):
+            return True, 800.00
+        else:
+            return True, 700.00
+            
     return False, 0.00
 
 def respon_salah_kawasan():
@@ -75,7 +107,7 @@ def paparkan_borang(jenis_transfer):
     
     if "two" in jenis_transfer or "2" in jenis_transfer:
         return (
-            "📝 **BORANG MAKLUMAT SEWAAN ( TWO WAY )**\n\n"
+            "統 **BORANG MAKLUMAT SEWAAN ( TWO WAY )**\n\n"
             "Syarikat : \n"
             "Alamat : \n\n"
             "Nama : \n"
@@ -85,7 +117,7 @@ def paparkan_borang(jenis_transfer):
             "Pick-up point : \n"
             "Drop-off point : \n"
             "Pax : \n\n"
-            "🔄 **Maklumat untuk RETURN trip :-**\n\n"
+            "売 **Maklumat untuk RETURN trip :-**\n\n"
             "Tarikh : \n"
             "Masa : \n"
             "Pick-up point : \n"
@@ -94,7 +126,7 @@ def paparkan_borang(jenis_transfer):
         )
     else:
         return (
-            "📝 **BORANG MAKLUMAT SEWAAN ( ONE WAY )**\n\n"
+            "統 **BORANG MAKLUMAT SEWAAN ( ONE WAY )**\n\n"
             "Syarikat : \n"
             "Alamat : \n\n"
             "Nama : \n"
@@ -116,18 +148,12 @@ def bundar_ke_puluhan_atas(nilai):
     return math.ceil(nilai / 10.0) * 10
 
 def kira_harga_kenderaan_sbleisure(jenis_kenderaan="bas", jenis_transfer="one_way", lokasi_ambil="ampang", jarak_km=0, tarikh_pergi=None, tarikh_balik=None, pilihan_deposit=50):
-    """
-    Kalkulator SBLEISURE - Master Price Dikalibrasi Penuh
-    Logik Two-Way:
-    - Tarikh sama: Tambah 50% (x1.5)
-    - Tarikh berlainan: Tambah 100% (x2.0)
-    """
     jenis_kenderaan = jenis_kenderaan.strip().lower()
     
     if jenis_kenderaan == "tour":
         return {
             "status": "rujuk_sales",
-            "mesej": "Eh, utk trip jenis Tour ni kita tak terima booking online, bosku. 😅 Sila direct roger sales team kitorang kat sini eh: https://wa.link/nrmesv"
+            "mesej": "Eh, utk trip jenis Tour ni kita tak terima booking online, bosku. Sila direct roger sales team kitorang kat sini eh: https://wa.link/nrmesv"
         }
     
     lokasi_ambil = lokasi_ambil.strip().lower()
@@ -141,44 +167,28 @@ def kira_harga_kenderaan_sbleisure(jenis_kenderaan="bas", jenis_transfer="one_wa
     
     jenis_transfer = jenis_transfer.strip().lower()
     
-    # Formula Jarak Dinamik Mengikut Zon Pickup
-    if lokasi_ambil in ["klia", "cyberjaya", "putrajaya"]:
-        if jarak_km <= 30:
-            jumlah_harga = harga_asas
-        elif jarak_km <= 50:
-            jumlah_harga = harga_asas + ((jarak_km - 30) * 10.00)
-        elif jarak_km <= 89:
-            jumlah_harga = harga_asas + (20 * 10.00) + ((jarak_km - 50) * 3.8136)
-        elif jarak_km <= 95:
-            jumlah_harga = harga_asas + (20 * 10.00) + (39 * 3.8136) + ((jarak_km - 89) * 4.00)
-        elif jarak_km <= 125:
-            jumlah_harga = harga_asas + (20 * 10.00) + (39 * 3.8136) + (6 * 4.00) + ((jarak_km - 95) * 4.4737)
-        else:
-            jumlah_harga = harga_asas + (20 * 10.00) + (39 * 3.8136) + (6 * 4.00) + (30 * 4.4737) + ((jarak_km - 125) * 9.85)
+    if jarak_km <= 30:
+        jumlah_harga = harga_asas
+    elif jarak_km <= 35:
+        jumlah_harga = harga_asas + ((jarak_km - 30) * 30.00)
+    elif jarak_km <= 40:
+        jumlah_harga = harga_asas + (5 * 30.00) + ((jarak_km - 35) * 10.00)
+    elif jarak_km <= 60:
+        jumlah_harga = harga_asas + (5 * 30.00) + (5 * 10.00) + ((jarak_km - 40) * 7.50)
+    elif jarak_km <= 80:
+        jumlah_harga = harga_asas + (5 * 30.00) + (5 * 10.00) + (20 * 7.50) + ((jarak_km - 60) * 16.67)
     else:
-        if jarak_km <= 30:
-            jumlah_harga = harga_asas
-        elif jarak_km <= 35:
-            jumlah_harga = harga_asas + ((jarak_km - 30) * 30.00)
-        elif jarak_km <= 40:
-            jumlah_harga = harga_asas + (5 * 30.00) + ((jarak_km - 35) * 10.00)
-        elif jarak_km <= 60:
-            jumlah_harga = harga_asas + (5 * 30.00) + (5 * 10.00) + ((jarak_km - 40) * 7.50)
-        elif jarak_km <= 80:
-            jumlah_harga = harga_asas + (5 * 30.00) + (5 * 10.00) + (20 * 7.50) + ((jarak_km - 60) * 16.67)
-        else:
-            jarak_sederhana_max = 50
-            kadar_sederhana = 10.00
-            jarak_jauh = jarak_km - 80
-            kadar_jauh = 8.27
-            jumlah_harga = harga_asas + (jarak_sederhana_max * kadar_sederhana) + (jarak_jauh * kadar_jauh)
+        jarak_sederhana_max = 50
+        kadar_sederhana = 10.00
+        jarak_jauh = jarak_km - 80
+        kadar_jauh = 8.27
+        jumlah_harga = harga_asas + (jarak_sederhana_max * kadar_sederhana) + (jarak_jauh * kadar_jauh)
         
-    # Larasan Pengiraan Mengikut Jenis Transfer (One-Way vs Two-Way Tarikh Sama/Berlainan)
     if "two" in jenis_transfer or "2" in jenis_transfer:
         if tarikh_pergi and tarikh_balik and tarikh_pergi == tarikh_balik:
-            raw_price = jumlah_harga * 1.5  # Tambah 50% untuk tarikh sama
+            raw_price = jumlah_harga * 1.5
         else:
-            raw_price = jumlah_harga * 2.0  # Tambah 100% untuk tarikh berlainan
+            raw_price = jumlah_harga * 2.0
     else:
         raw_price = jumlah_harga
 
@@ -196,7 +206,6 @@ def kira_harga_kenderaan_sbleisure(jenis_kenderaan="bas", jenis_transfer="one_wa
     }
 
 def respon_zulfa(hasil_kiraan):
-    """Gaya bahasa pasar Zulfa: Hanya bagi tahu harga (all-in termasuk tol) dan tanya setuju atau tidak"""
     if hasil_kiraan["status"] in ["rujuk_sales", "salah_kawasan"]:
         return hasil_kiraan["mesej"]
     
