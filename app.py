@@ -82,9 +82,9 @@ def webhook():
                         print(f"Zulfa Response: {balasan}")
                         
                         # 2. Semak sama ada balasan mengandungi pautan QR Code
-                        qr_link = sop_payment.get_qr_code_link()[cite: 1]
+                        qr_link = sop_payment.get_qr_code_link()
                         if qr_link in balasan:
-                            #asingkan teks penerangan daripada pautan imej
+                            # Asingkan teks penerangan daripada pautan imej
                             teks_bersih = balasan.replace(qr_link, "").strip()
                             send_whatsapp_message(phone_number, teks_bersih, image_url=qr_link)
                         else:
