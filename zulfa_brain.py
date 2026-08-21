@@ -14,7 +14,6 @@ api_key = os.getenv("GEMINI_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 
-# Fail database memori utama untuk simpanan perbualan berasingan mengikut nombor customer
 MEMORY_FILE = "zulfa_customers_memory.json"
 
 def load_all_memories():
@@ -28,26 +27,19 @@ def load_all_memories():
 
 def save_customer_memory(phone_number, user_input, zulfa_response):
     all_memories = load_all_memories()
-    
-    # Jika nombor customer belum ada dalam database, daftar masuk sebagai profil baru
     if phone_number not in all_memories:
         all_memories[phone_number] = {
             "phone": phone_number,
             "first_interaction": datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).strftime("%Y-%m-%d %I:%M %p"),
             "chat_history": []
         }
-    
-    # Masukkan dialog baru ke dalam history khusus nombor customer ini sahaja
     all_memories[phone_number]["chat_history"].append({
         "timestamp": datetime.now(pytz.timezone('Asia/Kuala_Lumpur')).strftime("%Y-%m-%d %I:%M %p"),
         "pelanggan": user_input,
         "zulfa": zulfa_response
     })
-    
-    # Hadkan kepada 20 interaksi terkini bagi setiap nombor untuk elakkan fail terlalu berat
     if len(all_memories[phone_number]["chat_history"]) > 20:
         all_memories[phone_number]["chat_history"] = all_memories[phone_number]["chat_history"][-20:]
-        
     try:
         with open(MEMORY_FILE, "w", encoding="utf-8") as f:
             json.dump(all_memories, f, ensure_ascii=False, indent=4)
@@ -74,8 +66,6 @@ def get_full_system_prompt(phone_number):
     profile = sbleisure_profile.get_company_identity()
     sop_bayar = sop_payment.get_payment_and_cancellation_sop_text()
     cara_bayar = sop_payment.get_payment_instructions_text()
-    
-    # Ambil sejarah perbualan khusus untuk nombor telefon ini sahaja
     customer_history = get_customer_context(phone_number)
 
     return f"""
@@ -95,10 +85,11 @@ def get_full_system_prompt(phone_number):
     - Sejarah Perbualan Khusus Dengan Nombor Ini:
     {customer_history}
 
-    GAYA BAHASA & ETIKA PROFESIONAL (SANGAT PENTING):
-    - **Panggilan Pelanggan:** DILARANG sama sekali memanggil pelanggan dengan gelaran "bos". Gunakan gelaran rasmi yang sopan seperti "Encik", "Puan", "Tuan", atau "Cik". 
-    - **Penyesuaian Nama:** Sekiranya pelanggan sudah memberitahu nama mereka, Zulfa **WAJIB** menyebut nama mereka bersama gelaran yang sesuai (contoh: "Encik Zakri") secara konsisten untuk nombor ini.
-    - **Wajib Ringkas & Sopan:** Jawab mesej dengan ringkas, padat, mesra, dan beretika tinggi seperti pegawai khidmat pelanggan sebenar. Elakkan ayat meleret-leret.
+    GAYA BAHASA & ETIKA PROFESIONAL (SANGAT PENTING - AMAT DITEKAN):
+    - **LARANGAN MUTLAK:** HARAM dan DILARANG KERAS memanggil pelanggan dengan gelaran "bos" atau sebarang panggilan santai yang tidak profesional. 
+    - **Panggilan Rasmi:** Gunakan gelaran yang sopan seperti "Encik", "Puan", "Tuan", atau "Cik".
+    - **Penyesuaian Nama:** Jika pelanggan sudah memberitahu nama mereka (contoh: "Saya Zakri"), Zulfa **WAJIB** memanggil mereka dengan gelaran rasmi berserta nama (contoh: "Encik Zakri") secara konsisten. Jika belum kenal, cukup sapa dengan "Encik/Puan/Tuan/Cik".
+    - **Wajib Ringkas & Sopan:** Jawab mesej dengan ringkas, padat, mesra, dan beretika korporat tinggi. Elakkan ayat meleret-leret.
     - Dilarang sama sekali meletakkan sebarang simbol rujukan seperti [cite] dalam teks balasan.
 
     ALIRAN PERBUALAN (FLOW) WAJIB SETELAH MESEJ AWALAN:
@@ -152,7 +143,6 @@ def proses_mesej(mesej_masuk, phone_number="601123456789"):
         response = model.generate_content(mesej_masuk)
         teks_balasan = response.text
         
-        # Simpan memori perbualan khusus diasingkan mengikut nombor telefon customer
         save_customer_memory(phone_number, mesej_masuk, teks_balasan)
         
         return teks_balasan
