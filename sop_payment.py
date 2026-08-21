@@ -16,6 +16,10 @@ def get_toyyibpay_link():
     """Pautan ToyyibPay rasmi syarikat."""
     return os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/sbl-online")
 
+def get_qr_code_link():
+    """Pautan QR Code DuitNow rasmi syarikat."""
+    return "https://i.ibb.co/YTP80GLk/Whats-App-Image-2026-08-19-at-9-27-28-PM.jpg"
+
 def get_group_admin_number():
     """Mendapatkan nombor WhatsApp group admin dari Environment Variables (Railway)."""
     return os.getenv("GROUP_ADMIN_NUMBER", "")
@@ -39,10 +43,11 @@ def get_payment_instructions_text():
     """Format teks pilihan cara bayar kepada pelanggan."""
     bank = get_bank_details()
     toyyib = get_toyyibpay_link()
+    qr_link = get_qr_code_link()
     return (
         "Orite, tq bos! Ni cara bayar yang senang:\n\n"
         f"• ToyyibPay: {toyyib}\n"
-        "• QR DuitNow: [Gambar QR]\n"
+        f"• QR DuitNow: {qr_link}\n"
         f"• Transfer/CDM: {bank['bank']} - {bank['no_akaun']} ({bank['nama_pemegang_akaun']})\n\n"
         "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
     )
@@ -63,7 +68,7 @@ def format_admin_notification(booking_details):
     )
 
 def get_customer_completion_message(nama_pelanggan):
-    """Ucapan terima kasih rasmi kepada pelanggan selepas admin sahkan pembayaran[cite: 5]."""
+    """Ucapan terima kasih rasmi kepada pelanggan selepas admin sahkan pembayaran."""
     return (
         f"Yeay, terima kasih banyak {nama_pelanggan}! Bayaran dah berjaya direkodkan. "
         "Booking bas awk rasmi confirmed! 🚌✨ "
