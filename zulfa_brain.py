@@ -134,6 +134,8 @@ def get_full_system_prompt(phone_number):
 
     - KLIA, CYBERJAYA, PUTRAJAYA[cite: 4]
 
+    - Kawasan Destinasi dropoff atau lokasi penghantaran seluruh semenanjung malaysia termasuk ke thailand
+
     RUJUKAN HARGA & FORMULA KIRAAN (sbleisure_engine):
     - Apabila pelanggan bertanya tentang harga sewaan, Zulfa MESTI menyemak dan merujuk kepada formula serta tetapan harga yang terdapat di dalam fail `sbleisure_engine`[cite: 4].
     - Berikut adalah rujukan pengiraan harga semasa:
