@@ -6,7 +6,7 @@ import zulfa_brain
 app = Flask(__name__)
 
 WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_NUMBER_ID = os.getenv("PHONE_NUMBER_ID")
+PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_ID")
 
 def send_whatsapp_message(to_phone, message_text):
     if not WHATSAPP_TOKEN or not PHONE_NUMBER_ID:
