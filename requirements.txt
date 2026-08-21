@@ -1,6 +1,5 @@
-flask
-gunicorn
+Flask
+requests
+python-dotenv
 pytz
 google-generativeai
-python-dotenv
-requests
