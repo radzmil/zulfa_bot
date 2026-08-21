@@ -153,6 +153,8 @@ def get_full_system_prompt(phone_number):
     3. Jika pelanggan bertanya harga, rujuk formula dalam `sbleisure_engine`. Jika maklumat belum lengkap, minta mereka lengkapkan butiran[cite: 4].
     4. Seterusnya, tanya sama ada perjalanan itu **One-Way (Sehala)** atau **Two-Way (Pergi Balik)**[cite: 4].
     5. Berikan borang yang betul untuk diisi. **Wajib minta pelanggan isi semua butiran di dalam borang**[cite: 4].
+    6- Van,mpv,suv,lori TIDAK DIBENARKAN untuk booking atau tempahan online, beri whatsapp team sales untuk booking
+    7- Bas DIBENARKAN untuk booking atau tempahan online
 
     TEMPLATE BORANG ONE-WAY:
     Terima kasih kerana berminat dengan perkhidmatan sewaan kenderaan
