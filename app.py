@@ -61,7 +61,8 @@ def webhook():
                 if messages:
                     msg = messages[0]
                     phone_number = msg.get("from")
-                    msg_body = msg.get("text", {}).get("body", "", cite: 2)
+                    # Ralat sintaks dibetulkan di sini (dibuang rujukan luaran)
+                    msg_body = msg.get("text", {}).get("body", "")
                     
                     if msg_body:
                         # 1. Dapatkan respons jawapan daripada Zulfa
@@ -85,7 +86,7 @@ def webhook():
                                 "ref_id": f"REF-{phone_number[-4:]}",
                                 "nama": f"Pelanggan ({phone_number})",
                                 "tarikh": "Rujuk teks di bawah / perbualan",
-                                "transfer_type": msg_body[:200], # Ambil sebahagian atau keseluruhan teks mesej pelanggan
+                                "transfer_type": msg_body[:200], 
                                 "masa": "-",
                                 "destinasi": "-",
                                 "status_bayaran": "MENUNGGU SAHAN ADMIN (Resit/Borang Diterima)"
