@@ -1,124 +1,98 @@
-from flask import Flask, request, jsonify
-import requests
 import os
+import logging
+from flask import Flask, request, jsonify
+from dotenv import load_dotenv
+
+# Muat turun pembolehubah persekitaran daripada fail .env
+load_dotenv()
+
+# Import modul projek Zulfa Bot
 import zulfa_brain
+import sbleisure_engine
 import sop_payment
+
+# Konfigurasi Logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
 
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN")
-PHONE_NUMBER_ID = os.getenv("WHATSAPP_PHONE_ID")
+# Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan
+KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 
-def send_whatsapp_message(to_phone, message_text, image_url=None):
-    if not WHATSAPP_TOKEN or not PHONE_NUMBER_ID:
-        print("WhatsApp token atau Phone Number ID tidak dijumpai dalam environment variables.")
-        return
-        
-    url = f"https://graph.facebook.com/v17.0/{PHONE_NUMBER_ID}/messages"
-    headers = {
-        "Authorization": f"Bearer {WHATSAPP_TOKEN}",
-        "Content-Type": "application/json",
-    }
-    
-    # Jika ada pautan imej QR, hantar jenis mesej 'image'
-    if image_url:
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": to_phone,
-            "type": "image",
-            "image": {
-                "link": image_url,
-                "caption": message_text
-            }
-        }
-    else:
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": to_phone,
-            "type": "text",
-            "text": {"body": message_text}
-        }
-    
-    response = requests.post(url, json=payload, headers=headers)
-    if response.status_code != 200:
-        print(f"Gagal menghantar mesej/imej WhatsApp: {response.text}")
-    else:
-        print(f"Mesej/Imej berjaya dihantar kepada {to_phone}")
-
-@app.route("/webhook", methods=["GET"])
-def verify_webhook():
-    mode = request.args.get("hub.mode")
-    token = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-    verify_token = os.getenv("VERIFY_TOKEN", "sbleisure_token")
-    
-    if mode and token:
-        if mode == "subscribe" and token == verify_token:
-            return challenge, 200
-        else:
-            return "Verification failed", 403
-    return "Hello World", 200
+@app.route("/", methods=["GET"])
+def index():
+    return jsonify({
+        "status": "online",
+        "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
+        "version": "2.0"
+    })
 
 @app.route("/webhook", methods=["POST"])
-def webhook():
+def whatsapp_webhook():
+    """
+    Titik laluan (webhook) untuk menerima mesej daripada platform pemesejan (WhatsApp / Telegram).
+    """
+    data = request.json
+    logging.info(f"Mesej diterima: {data}")
+
     try:
-        data = request.get_json()
-        print(f"Webhook received: {data}")
+        # Sesuaikan struktur data ini mengikut API provider WhatsApp anda (Cth: Evolution API, Twilio, Baileys, dll.)
+        sender_phone = data.get("from", "60123456789")
+        message_text = data.get("message", "").strip()
+
+        if not message_text:
+            return jsonify({"status": "ignored", "reason": "empty message"}), 200
+
+        message_lower = message_text.lower()
+
+        # 1. SEMAKAN PERMINTAAN QR CODE
+        if any(keyword in message_lower for keyword in KEYWORDS_QR):
+            caption_teks = (
+                "Berikut adalah QR Code DuitNow CIMB rasmi **SHAHRIL BASRI LEISURE ENTERPRISE**.\n\n"
+                "Sila imbas untuk membuat bayaran **50% deposit** atau **Bayaran Penuh (Full Payment)**.\n\n"
+                f"Pautan ToyyibPay alternatif: {sop_payment.TOYYIBPAY_LINK}\n\n"
+                "Selepas bayaran dibuat, sila hantar resit di sini ya. Terima kasih!"
+            )
+            
+            # Hantar imej QR terus kepada pelanggan menggunakan Direct Link dari sop_payment.py
+            hantar_imej_whatsapp(
+                phone=sender_phone, 
+                image_url=sop_payment.QR_CODE_DIRECT_LINK, 
+                caption=caption_teks
+            )
+            return jsonify({"status": "success", "action": "sent_qr_image"}), 200
+
+        # 2. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)
+        jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
         
-        entry = data.get("entry", [])
-        if entry:
-            changes = entry[0].get("changes", [])
-            if changes:
-                value = changes[0].get("value", [])
-                messages = value.get("messages", [])
-                if messages:
-                    msg = messages[0]
-                    phone_number = msg.get("from")
-                    msg_body = msg.get("text", {}).get("body", "")
-                    
-                    if msg_body:
-                        # 1. Dapatkan respons jawapan daripada Zulfa
-                        balasan = zulfa_brain.proses_mesej(msg_body, phone_number)
-                        print(f"Zulfa Response: {balasan}")
-                        
-                        # 2. Semak sama ada balasan mengandungi pautan QR Code
-                        qr_link = sop_payment.get_qr_code_link()
-                        if qr_link in balasan:
-                            # Asingkan teks penerangan daripada pautan imej
-                            teks_bersih = balasan.replace(qr_link, "").strip()
-                            send_whatsapp_message(phone_number, teks_bersih, image_url=qr_link)
-                        else:
-                            send_whatsapp_message(phone_number, balasan)
-                        
-                        # 3. Ambil nombor admin terkini daripada sop_payment
-                        admin_phone = sop_payment.get_group_admin_number()
-                        
-                        # 4. Semak jika mesej berkaitan pembayaran / resit / slip / borang lengkap
-                        keywords_bayar = ["resit", "slip", "dah bayar", "payment", "toyyibpay", "qr", "transfer", "bankin"]
-                        is_payment_message = any(k in msg_body.lower() for k in keywords_bayar)
-                        is_booking_form = "BORANG MAKLUMAT SEWAAN" in msg_body.upper() or ("PICK-UP POINT" in msg_body.upper() and "TARIKH" in msg_body.upper())
-                        
-                        if admin_phone and (is_payment_message or is_booking_form):
-                            booking_data = {
-                                "ref_id": f"REF-{phone_number[-4:]}",
-                                "nama": f"Pelanggan ({phone_number})",
-                                "tarikh": "Rujuk teks di bawah / perbualan",
-                                "transfer_type": msg_body[:200], 
-                                "masa": "-",
-                                "destinasi": "-",
-                                "status_bayaran": "MENUNGGU SAHAN ADMIN (Resit/Borang Diterima)"
-                            }
-                            
-                            notif_admin = sop_payment.format_admin_notification(booking_data)
-                            notif_admin += f"\n\n📝 *MAKLUMAT / MESEJ TERKINI DARI PELANGGAN:*\n{msg_body}"
-                            
-                            send_whatsapp_message(admin_phone, notif_admin)
-                            print(f"Notifikasi terperinci berjaya dihantar kepada Admin: {admin_phone}")
-                        
-        return jsonify({"status": "success"}), 200
+        # Hantar jawapan teks AI kepada pelanggan
+        hantar_teks_whatsapp(sender_phone, jawapan_ai)
+
+        return jsonify({"status": "success", "action": "sent_ai_response"}), 200
+
     except Exception as e:
-        print(f"Error webhook: {e}")
+        logging.error(f"Ralat pada webhook: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
+def hantar_teks_whatsapp(phone, text):
+    """
+    Fungsi pembantu untuk menghantar mesej teks. 
+    (Gantikan bahagian ini dengan fungsi API WhatsApp sebenar anda).
+    """
+    logging.info(f"Menghantar teks ke {phone}: {text}")
+    # Contoh kod API luaran boleh diletakkan di sini (cth: requests.post(...))
+
+
+def hantar_imej_whatsapp(phone, image_url, caption):
+    """
+    Fungsi pembantu untuk menghantar imej bersama kapsyen. 
+    (Gantikan bahagian ini dengan fungsi API WhatsApp sebenar anda).
+    """
+    logging.info(f"Menghantar imej QR ke {phone} (URL: {image_url})")
+    # Contoh kod API luaran boleh diletakkan di sini
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)

@@ -1,105 +1,57 @@
+import logging
+
+# Konfigurasi Logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
 # ==========================================
-# FILE: sop_payment.py
-# Modul SOP Pembayaran & Kewangan SBLEISURE
+# 1. MAKLUMAT AKAUN BANK, TOYYIBPAY & QR CODE
 # ==========================================
-import os
+COMPANY_NAME = "SHAHRIL BASRI LEISURE ENTERPRISE"
+BANK_NAME = "CIMB Bank"
+ACCOUNT_NAME = "SHAHRIL BASRI LEISURE ENTERPRISE"
+ACCOUNT_NUMBER = "MASUKKAN_NOMBOR_AKAUN_CIMB_DI_SINI"  # Sila kemaskini nombor akaun CIMB rasmi syarikat
 
-def get_bank_details():
-    """Maklumat akaun bank rasmi syarikat untuk transaksi pembayaran."""
-    return {
-        "bank": "CIMB Bank Berhad",
-        "no_akaun": "860 5247 780",
-        "nama_pemegang_akaun": "Shahril Basri Leisure Enterprise"
-    }
+# Pautan Rasmi ToyyibPay & Direct Image Link QR Code DuitNow
+TOYYIBPAY_LINK = "https://toyyibpay.com/sbl-online"
+QR_CODE_DIRECT_LINK = "https://i.ibb.co/YTP80GLk/Whats-App-Image-2026-08-19-at-9-27-28-PM.jpg"
 
-def get_toyyibpay_link():
-    """Pautan ToyyibPay rasmi syarikat."""
-    return os.getenv("TOYYIBPAY_LINK", "https://toyyibpay.com/sbl-online")
+KADAR_DEPOSIT = "50% deposit atau bayaran penuh (Full Payment)"
 
-def get_qr_code_link():
-    """Pautan QR Code DuitNow rasmi syarikat."""
-    return "https://i.ibb.co/YTP80GLk/Whats-App-Image-2026-08-19-at-9-27-28-PM.jpg"
+# ==========================================
+# 2. FUNGSI SOKONGAN & SOP PEMBAYARAN
+# ==========================================
 
-def get_group_admin_number():
-    """Mendapatkan nombor WhatsApp group admin dari Environment Variables (Railway)."""
-    return os.getenv("GROUP_ADMIN_NUMBER", "")
-
-def get_payment_and_cancellation_sop_text():
-    """Teks syarat rasmi pembayaran dan pembatalan mengikut SOP Jannah/Zulfa."""
+def get_payment_details():
+    """
+    Memulangkan maklumat lengkap pilihan pembayaran rasmi syarikat.
+    """
     return (
-        "SYARIKAT PEMBAYARAN & PEMBATALAN:\n"
-        "1. Pembayaran: Deposit 50% untuk lock tarikh (baki 50% 2 hari sebelum) atau Full Payment.\n"
-        "2. Pembatalan oleh Pelanggan:\n"
-        "   - >14 hari sebelum tarikh: Refund 90% (potong 10% yuran admin).\n"
-        "   - 7-14 hari sebelum tarikh: Refund 50%.\n"
-        "   - <2 hari sebelum tarikh: Burn 100%.\n"
-        "   - Gagal bayar baki 2 hari sebelum (jika deposit): Tempahan terbatal, deposit burn.\n"
-        "3. Penundaan Tarikh: Dibenarkan 1 kali (notis 7 hari awal). Jika <7 hari, caj RM200.\n"
-        "4. Pembatalan oleh Syarikat: Refund 100% dalam 7 hari bekerja.\n"
-        "5. Nota Penting: Deposit adalah untuk menahan tarikh. Jika tarikh dibatalkan, deposit tidak dikembalikan."
+        f"**Pilihan Pembayaran Rasmi ({COMPANY_NAME}):**\n\n"
+        f"1. **Imbas QR Code DuitNow ({BANK_NAME}):**\n"
+        f"   Pautan Imej QR: {QR_CODE_DIRECT_LINK}\n"
+        f"   Imbas QR Code atas nama **{ACCOUNT_NAME}** untuk bayaran menerusi aplikasi perbankan anda.\n\n"
+        f"2. **Bayaran Dalam Talian (ToyyibPay):**\n"
+        f"   Pautan Rasmi: {TOYYIBPAY_LINK}\n\n"
+        f"3. **Pindahan Bank Direct (FPX / Online Transfer):**\n"
+        f"   Bank: {BANK_NAME}\n"
+        f"   Nama Akaun: **{ACCOUNT_NAME}**\n"
+        f"   Nombor Akaun: **{ACCOUNT_NUMBER}**\n\n"
+        f"Syarat Pembayaran: **{KADAR_DEPOSIT}**\n"
+        f"Sila kemukakan resit/bukti pembayaran rasmi selepas transaksi dibuat untuk pengesahan tempahan."
     )
 
-def get_payment_method_prompt():
-    """Menanya pelanggan pilihan cara pembayaran mereka secara perbualan semula jadi."""
-    return (
-        "Orite, tq bos! Nak selesaikan bayaran guna online banking ToyyibPay atau imbas QR Code DuitNow ya?"
-    )
 
-def get_payment_instructions_text(pilihan=""):
-    """Format teks pilihan cara bayar mengikut respons teks pelanggan."""
-    bank = get_bank_details()
-    toyyib = get_toyyibpay_link()
-    qr_link = get_qr_code_link()
-    
-    pilihan_str = str(pilihan).lower()
-    
-    # Semak jika pelanggan memilih online banking / toyyibpay
-    if "toyyib" in pilihan_str or "online" in pilihan_str or "banking" in pilihan_str:
-        return (
-            "Baik bos! Sila buat pembayaran melalui pautan Online Banking ToyyibPay di bawah:\n\n"
-            f"🔗 {toyyib}\n\n"
-            "Dah setel nanti, rojer hantar gambar resit kat Zulfa k."
-        )
-    # Semak jika pelanggan memilih QR code / gambar / duitnow
-    elif "qr" in pilihan_str or "code" in pilihan_str or "duitnow" in pilihan_str or "gambar" in pilihan_str:
-        return (
-            "Baik bos! Sila rujuk imej QR Code DuitNow rasmi syarikat kita di bawah:\n\n"
-            f"🖼️ {qr_link}\n\n"
-            f"Atau boleh transfer manual ke akaun rasmi:\n"
-            f"• Bank: {bank['bank']}\n"
-            f"• No Akaun: {bank['no_akaun']}\n"
-            f"• Nama: {bank['nama_pemegang_akaun']}\n\n"
-            "Dah setel nanti, rojer hantar gambar resit atau slip pembayaran kat Zulfa k."
-        )
-    else:
-        # Fallback mesra jika jawapan terbuka
-        return (
-            "Orite, tq bos! Ni pilihan cara bayar yang senang:\n\n"
-            f"• Online Banking (ToyyibPay): {toyyib}\n"
-            f"• QR Code DuitNow: {qr_link}\n"
-            f"• Transfer/CDM: {bank['bank']} - {bank['no_akaun']} ({bank['nama_pemegang_akaun']})\n\n"
-            "Dah setel nanti, rojer hantar gambar resit atau slip CDM kat Zulfa k."
-        )
-
-def format_admin_notification(booking_details):
-    """Format mesej butiran tempahan yang siap dibayar untuk dihantar ke GROUP_ADMIN_NUMBER."""
-    admin_no = get_group_admin_number()
-    return (
-        f"🚨 *UPDATE: NEW PAYMENT RECEIVED* 🚨\n\n"
-        f"• *Reference ID / Bukti:* {booking_details.get('ref_id', '-')}\n"
-        f"• *Nama Customer:* {booking_details.get('nama', '-')}\n"
-        f"• *Tarikh Perjalanan:* {booking_details.get('tarikh', '-')}\n"
-        f"• *Jenis Transfer:* {booking_details.get('transfer_type', '-')}\n"
-        f"• *Masa Pickup & Return:* {booking_details.get('masa', '-')}\n"
-        f"• *Destinasi/Lokasi:* {booking_details.get('destinasi', '-')}\n"
-        f"• *Status Bayaran:* {booking_details.get('status_bayaran', 'PAID (Deposit 50% / Full)')}\n\n"
-        f"Target Admin No: {admin_no}"
-    )
-
-def get_customer_completion_message(nama_pelanggan):
-    """Ucapan terima kasih rasmi kepada pelanggan selepas admin sahkan pembayaran."""
-    return (
-        f"Yeay, terima kasih banyak {nama_pelanggan}! Bayaran dah berjaya direkodkan. "
-        "Booking bas awk rasmi confirmed! 🚌✨ "
-        "Nanti team kitorang akan contact awk untuk details driver dan perjalanan ya."
-    )
+def get_sop_text():
+    """
+    Memulangkan teks SOP Pembayaran untuk dimasukkan ke dalam System Instruction Zulfa.
+    """
+    return f"""
+    - **Kaedah Pembayaran**: Pelanggan boleh membuat bayaran melalui:
+      1. Imbasan QR Code DuitNow CIMB Bank Syarikat ({ACCOUNT_NAME}). Pautan imej QR rasmi: {QR_CODE_DIRECT_LINK}
+      2. Pautan ToyyibPay rasmi ({TOYYIBPAY_LINK}).
+      3. Pindahan bank terus ke akaun {BANK_NAME}: **{ACCOUNT_NAME}** ({ACCOUNT_NUMBER}).
+    - **Syarat Deposit**: Pelanggan perlu membayar **50% deposit** atau **Bayaran Penuh (Full Payment)** untuk mengesahkan tempahan bas.
+    - **Baki Pembayaran**: Jika membayar deposit 50%, baki bayaran perlu dijelaskan sekurang-kurangnya **3 hari sebelum** tarikh perjalanan.
+    - **Pengesahan Bayaran**: Pelanggan WAJIB menghantar resit rasmi transaksi bank, tangkap layar ToyyibPay, atau resit imbasan QR untuk tujuan rekod sistem.
+    - **Pembatalan / Polisi Pemulangan**: Bayaran deposit tidak akan dipulangkan jika pembatalan dibuat kurang daripada 7 hari dari tarikh perlepasan.
+    """
