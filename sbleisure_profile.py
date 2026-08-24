@@ -2,25 +2,14 @@
 # FILE: sbleisure_profile.py
 # Modul Profil Syarikat SBLEISURE
 # ==========================================
-def get_profile_text():
-    """Mengembalikan teks profil lengkap untuk system instruction."""
-    p = get_company_identity()
-    return f"""
-    Nama Syarikat: {p['nama_syarikat']}
-    No. SSM: {p['ssm_no']}
-    Alamat: {p['alamat']}
-    Google Maps: {p['google_maps']}
-    Emel: {p['emel']}
-    Telefon: {', '.join(p['telefon'])}
-    Facebook: {p['facebook']}
-    """
+
 def get_company_identity():
     """Mengembalikan maklumat rasmi identiti dan pendaftaran syarikat SBLEISURE."""
     profile = {
         "nama_syarikat": "Shahril Basri Leisure Enterprise (SBLEISURE)",
         "ssm_no": "202203168334 (003413019-W)",
         "tahun_mula_operasi": 2017,
-        "tahun_daftar_ssm": 2017,
+        "tahun_daftar_ssm": 2022,
         "alamat": "No. 8-1, 9-1, First Floor, Laman Niaga@Ampang Waterfront, Jalan AWF 3A, Ampang Waterfront, 68000, Ampang, Selangor",
         "google_maps": "https://maps.app.goo.gl/jSJHUNXjZdhiLDRbA",
         "emel": "sbltransport.my@gmail.com",
@@ -72,3 +61,16 @@ def get_experience_and_clients():
         ]
     }
     return experience
+
+def get_profile_text():
+    """Menggabungkan maklumat profil menjadi teks supaya Zulfa boleh baca."""
+    p = get_company_identity()
+    return f"""
+    Nama Syarikat: {p['nama_syarikat']}
+    No SSM: {p['ssm_no']}
+    Alamat Rasmi: {p['alamat']}
+    Pautan Google Maps: {p['google_maps']}
+    No Telefon: {', '.join(p['telefon'])}
+    Emel: {p['emel']}
+    Facebook Rasmi: {p['facebook']}
+    """
