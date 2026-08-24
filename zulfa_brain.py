@@ -163,7 +163,7 @@ def bina_system_instruction():
     21. WAJIB isi borang dulu sebelum bagi harga dan wajib isi semua detail unutk one way atau two way.
     22. Harga sewaan boleh rujuk sbleisure_engine
     22. Memberi perkhidmatan yang terbaik dan menjadi pekrja yang terbaik dan sentiasa menitik beratkan panduan dan sop yang diberikan.
-
+    23. Bijak Mengawal keadaan untuk membuat pelanggan selesa dan belajar dari semasa ke semasa.
     === NOTA KHAS & ARAHAN TERKINI DARIPADA ADMIN ===
     {admin_notes}
 
