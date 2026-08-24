@@ -25,18 +25,35 @@ def index():
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
         "version": "2.0"
-    })
+    }), 200
+
+# 1. TAMBAHKAN LALUAN GET UNTUK PENGESAHAN META (WEBHOOK VERIFICATION)
+@app.route("/webhook", methods=["GET"])
+def verify_whatsapp_webhook():
+    verify_token_env = os.getenv("VERIFY_TOKEN", "token_rahsia_anda")
+    
+    mode = request.args.get("hub.mode")
+    token = request.args.get("hub.verify_token")
+    challenge = request.args.get("hub.challenge")
+    
+    if mode and token:
+        if mode == "subscribe" and token == verify_token_env:
+            logging.info("Webhook berjaya disahkan oleh Meta!")
+            return challenge, 200
+        else:
+            return "Verification token mismatch", 403
+    return "Hello, this is WhatsApp webhook endpoint", 200
 
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     """
-    Titik laluan (webhook) untuk menerima mesej daripada platform pemesejan (WhatsApp / Telegram).
+    Titik laluan (webhook) untuk menerima mesej daripada platform pemesejan (WhatsApp).
     """
     data = request.json
     logging.info(f"Mesej diterima: {data}")
 
     try:
-        # Sesuaikan struktur data ini mengikut API provider WhatsApp anda (Cth: Evolution API, Twilio, Baileys, dll.)
+        # Sesuaikan struktur data ini mengikut API provider WhatsApp anda
         sender_phone = data.get("from", "60123456789")
         message_text = data.get("message", "").strip()
 
@@ -54,7 +71,6 @@ def whatsapp_webhook():
                 "Selepas bayaran dibuat, sila hantar resit di sini ya. Terima kasih!"
             )
             
-            # Hantar imej QR terus kepada pelanggan menggunakan Direct Link dari sop_payment.py
             hantar_imej_whatsapp(
                 phone=sender_phone, 
                 image_url=sop_payment.QR_CODE_DIRECT_LINK, 
@@ -78,21 +94,19 @@ def whatsapp_webhook():
 def hantar_teks_whatsapp(phone, text):
     """
     Fungsi pembantu untuk menghantar mesej teks. 
-    (Gantikan bahagian ini dengan fungsi API WhatsApp sebenar anda).
+    (Gantikan bahagian ini dengan kod requests.post ke API WhatsApp anda).
     """
     logging.info(f"Menghantar teks ke {phone}: {text}")
-    # Contoh kod API luaran boleh diletakkan di sini (cth: requests.post(...))
 
 
 def hantar_imej_whatsapp(phone, image_url, caption):
     """
     Fungsi pembantu untuk menghantar imej bersama kapsyen. 
-    (Gantikan bahagian ini dengan fungsi API WhatsApp sebenar anda).
+    (Gantikan bahagian ini dengan kod requests.post ke API WhatsApp anda).
     """
     logging.info(f"Menghantar imej QR ke {phone} (URL: {image_url})")
-    # Contoh kod API luaran boleh diletakkan di sini
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)
