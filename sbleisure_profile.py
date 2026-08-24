@@ -9,7 +9,7 @@ def get_company_identity():
         "nama_syarikat": "Shahril Basri Leisure Enterprise (SBLEISURE)",
         "ssm_no": "202203168334 (003413019-W)",
         "tahun_mula_operasi": 2017,
-        "tahun_daftar_ssm": 2022,
+        "tahun_daftar_ssm": 2017,
         "alamat": "No. 8-1, 9-1, First Floor, Laman Niaga@Ampang Waterfront, Jalan AWF 3A, Ampang Waterfront, 68000, Ampang, Selangor",
         "google_maps": "https://maps.app.goo.gl/jSJHUNXjZdhiLDRbA",
         "emel": "sbltransport.my@gmail.com",
