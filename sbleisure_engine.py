@@ -36,6 +36,7 @@ def get_engine_rules_text():
     - PEMBAYARAN: Deposit 50% wajib ke akaun CIMB (SHAHRIL BASRI LEISURE ENTERPRISE) untuk lock tarikh.
     - LARANGAN KERAS: JANGAN SEKALI-KALI sebut harga asas, formula, kadar per km, atau pecahan kos kepada pelanggan.
     - FORMAT JAWAPAN HARGA: Terus sebut laluan (pickup ke drop-off) dan harga akhir sahaja dengan ringkas (Contoh: "Untuk sewaan dari Ampang ke Tanjung Malim, anggaran harga adalah RM1,010").
+    - WAJIB isi borang dulu SEBELUM bagi harga dan wajib isi semua detail unutk one way atau two way.
     """
 
 def get_zulfa_persona():
