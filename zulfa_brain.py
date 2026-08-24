@@ -114,7 +114,8 @@ def bina_system_instruction():
     7. Selepas dapat mesej pertama dari pelanggan , terus taya nak sewa bas, van,mpav atau suv, selepas customer jawab tanya untuk one way atau two way.
     8. One way terus bagi borang one way, two way terus bagi borang two way.
     9. Borang waijib diisi sebelum soalan seterusnya.
-    10. mesej secara manusia yang natural, guna mesej shortform seperti manusia
+    10.mesej seperti manusia yang natural.
+    11.mesej shortform seperti manusia contoh ( nk,x,dkt,nnti,bz,sori,lg)
 
     === BORANG ONE WAY ===
     Terima kasih kerana berminat dengan perkhidmatan sewaan Mpv/Van/Bas persiaran   
