@@ -1,6 +1,7 @@
 import os
 import logging
 import requests
+from datetime import datetime
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 
@@ -28,7 +29,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.1"
+        "version": "2.2"
     }), 200
 
 # Laluan GET untuk pengesahan Meta Webhook
@@ -80,11 +81,26 @@ def whatsapp_webhook():
 
         message_lower = message_text.lower()
 
+        # 0. KAWALAN KHAS ADMIN UNTUK TAMBAH NOTA / INGATAN BARU (#nota / #ingat)
+        admin_phone = "60132434200"
+        if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
+            nota_baru = message_text.replace("#nota", "").replace("#NOTA", "").replace("#ingat", "").replace("#INGAT", "").strip()
+            
+            # Simpan ke dalam fail teks ingatan admin
+            with open("admin_memory.txt", "a", encoding="utf-8") as f:
+                f.write(f"- [{datetime.now().strftime('%Y-%m-%d %H:%M')}] {nota_baru}\n")
+            
+            # Balas pengesahan kepada admin
+            teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
+            hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
+            return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
+
         # 1. SEMAKAN PERMINTAAN QR CODE
         if any(keyword in message_lower for keyword in KEYWORDS_QR):
             caption_teks = (
                 "Berikut adalah QR Code DuitNow CIMB rasmi **SHAHRIL BASRI LEISURE ENTERPRISE**.\n\n"
-                "Sila imbas untuk membuat bayaran **50% deposit** atau **Bayaran Penuh (Full Payment)**.\n\n"
+                "Sila imbas untuk membuat bayaran **50% deposit** atau **Bayaran Penuh (Full Payment)**.\n"
+                "*(PENTING: Sila letakkan nombor telefon anda pada bahagian rujukan/reference pemindahan)*\n\n"
                 f"Pautan ToyyibPay alternatif: {getattr(sop_payment, 'TOYYIBPAY_LINK', 'https://toyyibpay.com')}\n\n"
                 "Selepas bayaran dibuat, sila hantar resit di sini ya. Terima kasih!"
             )
@@ -116,12 +132,12 @@ def whatsapp_webhook():
             sop_payment.hantar_emel_admin(data_tempahan_baru)
 
             # B. Hantar Notifikasi WhatsApp ke Nombor Admin Rasmi: 60132434200
-            admin_phone = "60132434200"
+            admin_phone_target = "60132434200"
             teks_admin = sop_payment.format_admin_notification(data_tempahan_baru)
-            hantar_teks_whatsapp(admin_phone, teks_admin)
+            hantar_teks_whatsapp(admin_phone_target, teks_admin)
 
             # Balas kepada pelanggan
-            balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan dihantar kepada pihak pengurusan (Admin) untuk disemak. Kami akan sahkan sebentar lagi."
+            balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan dihantar kepada pihak pengurusan (Admin) untuk disemak menggunakan rujukan nombor telefon anda. Kami akan sahkan sebentar lagi."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
