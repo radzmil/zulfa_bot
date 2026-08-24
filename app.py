@@ -1,21 +1,12 @@
 import os
-import logging
+import requests
 from flask import Flask, request, jsonify
-from dotenv import load_dotenv
-
-# Muat turun pembolehubah persekitaran daripada fail .env
-load_dotenv()
-
-# Import modul projek Zulfa Bot
-import zulfa_brain
 import sbleisure_engine
 import sop_payment
 
-# Konfigurasi Logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
 app = Flask(__name__)
 
+<<<<<<< HEAD
 # Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 
@@ -49,10 +40,15 @@ def whatsapp_webhook():
     """
     Titik laluan (webhook) untuk menerima mesej daripada platform pemesejan (WhatsApp).
     """
-    data = request.json
-    logging.info(f"Mesej diterima: {data}")
+=======
+ADMIN_PHONE = "60132434200"
 
+@app.route("/webhook", methods=["POST"])
+def webhook():
+>>>>>>> 002d667ef9161a34e9eaa187fab7ec7b6712108f
+    data = request.json
     try:
+<<<<<<< HEAD
         # Sesuaikan struktur data ini mengikut API provider WhatsApp anda
         sender_phone = data.get("from", "60123456789")
         message_text = data.get("message", "").strip()
@@ -80,16 +76,58 @@ def whatsapp_webhook():
 
         # 2. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)
         jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
+=======
+        message_data = data.get("message", {})
+        phone_number = message_data.get("from", "")
+        message_text = message_data.get("body", "").strip()
+>>>>>>> 002d667ef9161a34e9eaa187fab7ec7b6712108f
         
-        # Hantar jawapan teks AI kepada pelanggan
-        hantar_teks_whatsapp(sender_phone, jawapan_ai)
+        # Semak persetujuan Terma & Syarat
+        if "setuju" in message_text.lower():
+            reply_text = (
+                "Terima kasih kerana bersetuju dengan Terma & Syarat kami.\n\n"
+                "Sila pilih jenis perjalanan anda untuk meneruskan tempahan:\n"
+                "1. Sehala (One-Way)\n"
+                "2. Pergi-Balik (Two-Way)"
+            )
+            send_whatsapp_message(phone_number, reply_text)
+            return jsonify({"status": "success"}), 200
 
-        return jsonify({"status": "success", "action": "sent_ai_response"}), 200
+        # Semak pembayaran / resit
+        keywords_payment = ["bayar", "payment", "resit", "slip", "dah bayar", "bank in", "toyyibpay"]
+        is_payment_message = any(k in message_text.lower() for k in keywords_payment)
+        is_booking_form = "-" in message_text and ("nama" in message_text.lower() or "destinasi" in message_text.lower())
+
+        if ADMIN_PHONE and (is_payment_message or is_booking_form):
+            booking_data = {
+                "ref_id": f"REF-{phone_number}",
+                "nama": f"Pelanggan ({phone_number})",
+                "tarikh": "Rujuk perbualan",
+                "transfer_type": message_text[:200],
+                "masa": "-",
+                "destinasi": "-",
+                "status_bayaran": "MENUNGGU PENGESAHAN ADMIN (Resit/Borang Diterima)"
+            }
+            
+            notif_admin = sop_payment.format_admin_notification(booking_data)
+            notif_admin += f"\n\n📝 **MAKLUMAT TERKINI DARI PELANGGAN:**\n{message_text}"
+            
+            send_whatsapp_message(ADMIN_PHONE, notif_admin)
+            
+            reply_pelanggan = (
+                "Terima kasih! Maklumat dan resit anda telah diterima.\n"
+                "Pihak admin kami akan menyemak transaksi pembayaran anda dalam masa terdekat."
+            )
+            send_whatsapp_message(phone_number, reply_pelanggan)
+            return jsonify({"status": "success"}), 200
+
+        return jsonify({"status": "received"}), 200
 
     except Exception as e:
-        logging.error(f"Ralat pada webhook: {e}")
+        print(f"Ralat pada webhook: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+<<<<<<< HEAD
 
 def hantar_teks_whatsapp(phone, text):
     """
@@ -110,3 +148,11 @@ def hantar_imej_whatsapp(phone, image_url, caption):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
+=======
+def send_whatsapp_message(to, message):
+    # Masukkan endpoint API WhatsApp anda di sini
+    pass
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+>>>>>>> 002d667ef9161a34e9eaa187fab7ec7b6712108f
