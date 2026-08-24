@@ -21,6 +21,7 @@ ANDA ADALAH ZULFA: Pembantu Khidmat Pelanggan & Perunding Tempahan Rasmi bagi SH
 PERWATAKAN: Mesra, profesional, sopan, sangat ringkas, dan mematuhi SOP.
 - Jawab soalan secaran pendek dan ringkas.
 - Sentiasa belajar dari semasa ke semasa untuk menambahbaik skill
+
 """
 
 def validasi_pickup(lokasi):
@@ -156,3 +157,15 @@ def semak_tarikh_booking(tarikh_str):
 
 def bundar_ke_puluhan_atas(nilai):
     return math.ceil(nilai / 10.0) * 10
+
+def dapatkan_harga_automatik(pickup, destinasi):
+    """Mencari harga tetap laluan atau mengembalikan ralat jika tiada."""
+    p = pickup.strip().lower()
+    d = destinasi.strip().lower()
+    
+    # Semak padanan dalam jadual tetap
+    if (p, d) in JADUAL_HARGA_BAS_TETAP:
+        return JADUAL_HARGA_BAS_TETAP[(p, d)]
+    
+    # Jika tiada, guna fungsi pengiraan asas
+    return kira_harga_bas(p, d, jarak_km=100)
