@@ -24,10 +24,6 @@ def get_engine_rules_text():
        - KL (Pusat bandar, Bukit Bintang, Chow Kit, Brickfields, Bangsar, Seputeh, Kepong, Segambut, Sentul, Jalan Ipoh, Mont Kiara, Sri Hartamas, Batu Caves, Setapak, Wangsa Maju, Danau Kota, Gombak Utara, Taman Melati, Semarak, Ampang Hilir, Kampung Pandan, Desa Pandan, Maluri, Ulu Kelang): RM700
        - KLIA, Cyberjaya, Putrajaya: RM800
 
-    3. NEGERI SEMBILAN:
-       - Seremban & Port Dickson (Mukim-mukim berkaitan): RM1,200
-       - Rembau, Kuala Pilah, Jelebu (Mukim-mukim berkaitan): RM1,400
-       - Jempol & Tampin (Mukim-mukim berkaitan): RM1,600
     """
 
 def get_zulfa_persona():
