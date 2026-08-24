@@ -2,7 +2,18 @@
 # FILE: sbleisure_profile.py
 # Modul Profil Syarikat SBLEISURE
 # ==========================================
-
+def get_profile_text():
+    """Mengembalikan teks profil lengkap untuk system instruction."""
+    p = get_company_identity()
+    return f"""
+    Nama Syarikat: {p['nama_syarikat']}
+    No. SSM: {p['ssm_no']}
+    Alamat: {p['alamat']}
+    Google Maps: {p['google_maps']}
+    Emel: {p['emel']}
+    Telefon: {', '.join(p['telefon'])}
+    Facebook: {p['facebook']}
+    """
 def get_company_identity():
     """Mengembalikan maklumat rasmi identiti dan pendaftaran syarikat SBLEISURE."""
     profile = {
