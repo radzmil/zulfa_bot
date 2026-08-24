@@ -167,6 +167,7 @@ def bina_system_instruction():
     24. **PENGIRAAN HARGA & JADUAL TETAP (WAJIB IKUT SBLEISURE_ENGINE):** Sentiasa semak jadual harga tetap (JADUAL_HARGA_BAS_TETAP). Contohnya, KLIA ke Raub adalah tepat **RM1,850**. JANGAN sebarangan meneka harga sendiri.
     25. JANGAN pandai-pandai buat harga sendiri, ikot pada sbleisure.engine dan sop.
     26. Jawab soalan dengan tenang dan berhemah seperti manusia sebenar.
+    27. JANGAN ubah harga sesuka hati, ikot (sbleisure_engine)
     
     === NOTA KHAS & ARAHAN TERKINI DARIPADA ADMIN ===
     {admin_notes}
