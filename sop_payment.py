@@ -1,7 +1,15 @@
 # ==========================================
 # FAIL: sop_payment.py
-# MODUL SOP PAYMENT & TERMA SYARAT (RUJUKAN ZULFA)
+# MODUL SOP PAYMENT, TERMA SYARAT & NOTIFIKASI
 # ==========================================
+import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Konstanta Admin Rasmi
+GROUP_ADMIN_NUMBER = "60132434200"
+ADMIN_EMAIL = "sbleisuretranspot.my@gmail.com"
 
 def get_sop_payment_text():
     return """
@@ -36,9 +44,45 @@ def paparkan_terma_pembayaran_ringkas():
 def format_admin_notification(data):
     return (
         f"🚨 **NOTIFIKASI TEMPAHAN / PEMBAYARAN BAHARU** 🚨\n\n"
-        f"• **ID Tempahan:** {data.get('ref_id')}\n"
-        f"• **Nama Pelanggan:** {data.get('nama')}\n"
-        f"• **Jenis / Mesej:** {data.get('transfer_type')}\n"
-        f"• **Status Semasa:** {data.get('status_bayaran')}\n\n"
+        f"• **ID Tempahan:** {data.get('ref_id', '-')}\n"
+        f"• **Nama Pelanggan:** {data.get('nama', '-')}\n"
+        f"• **No Telefon:** {data.get('no_tel', '-')}\n"
+        f"• **Tarikh Perjalanan:** {data.get('tarikh', '-')}\n"
+        f"• **Pick-up:** {data.get('pickup', '-')}\n"
+        f"• **Drop-off:** {data.get('dropoff', '-')}\n"
+        f"• **Jumlah Harga:** RM{data.get('harga', 0):.2f}\n"
+        f"• **Status Bayaran:** {data.get('status_bayaran', 'Selesai/Deposit')}\n\n"
         f"Sila semak akaun bank rasmi (CIMB - SHAHRIL BASRI LEISURE ENTERPRISE) untuk pengesahan."
     )
+
+def hantar_emel_admin(data_tempahan):
+    """Fungsi untuk menghantar notifikasi butiran tempahan ke emel rasmi syarikat"""
+    smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+    smtp_port = int(os.getenv("SMTP_PORT", 587))
+    sender_email = os.getenv("SENDER_EMAIL", ADMIN_EMAIL)
+    sender_password = os.getenv("SENDER_PASSWORD", "") # Diambil dari environment variable Railway/Env
+
+    if not sender_password:
+        print("Amaran: SENDER_PASSWORD tidak disetkan. Emel gagal dihantar.")
+        return False
+
+    subjek = f"🔔 Tempahan Baru Disahkan - ID: {data_tempahan.get('ref_id', 'SB-LEISURE')}"
+    isi_mesej = format_admin_notification(data_tempahan)
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = ADMIN_EMAIL
+    msg['Subject'] = subjek
+    msg.attach(MIMEText(isi_mesej, 'plain', 'utf-8'))
+
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.sendmail(sender_email, ADMIN_EMAIL, msg.as_string())
+        server.quit()
+        print(info := f"Emel berjaya dihantar ke {ADMIN_EMAIL}")
+        return True
+    except Exception as e:
+        print(f"Ralat menghantar emel: {e}")
+        return False

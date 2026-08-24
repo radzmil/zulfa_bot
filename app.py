@@ -20,12 +20,15 @@ app = Flask(__name__)
 # Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 
+# Senarai kata kunci untuk mengesan penghantaran resit / bayaran selesai
+KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
+
 @app.route("/", methods=["GET"])
 def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.0"
+        "version": "2.1"
     }), 200
 
 # Laluan GET untuk pengesahan Meta Webhook
@@ -75,9 +78,6 @@ def whatsapp_webhook():
         if msg_obj.get("type") == "text":
             message_text = msg_obj.get("text", {}).get("body", "").strip()
 
-        if not message_text:
-            return jsonify({"status": "ignored", "reason": "empty message"}), 200
-
         message_lower = message_text.lower()
 
         # 1. SEMAKAN PERMINTAAN QR CODE
@@ -85,22 +85,51 @@ def whatsapp_webhook():
             caption_teks = (
                 "Berikut adalah QR Code DuitNow CIMB rasmi **SHAHRIL BASRI LEISURE ENTERPRISE**.\n\n"
                 "Sila imbas untuk membuat bayaran **50% deposit** atau **Bayaran Penuh (Full Payment)**.\n\n"
-                f"Pautan ToyyibPay alternatif: {sop_payment.TOYYIBPAY_LINK}\n\n"
+                f"Pautan ToyyibPay alternatif: {getattr(sop_payment, 'TOYYIBPAY_LINK', 'https://toyyibpay.com')}\n\n"
                 "Selepas bayaran dibuat, sila hantar resit di sini ya. Terima kasih!"
             )
             
+            # Semak sama ada pembolehubah imej wujud dalam sop_payment, jika tidak guna string kosong/default
+            qr_link = getattr(sop_payment, "QR_CODE_DIRECT_LINK", "")
             hantar_imej_whatsapp(
                 phone=sender_phone, 
-                image_url=sop_payment.QR_CODE_DIRECT_LINK, 
+                image_url=qr_link, 
                 caption=caption_teks
             )
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
-        # 2. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)
-        jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
-        
-        # Hantar jawapan teks AI kepada pelanggan
-        hantar_teks_whatsapp(sender_phone, jawapan_ai)
+        # 2. SEMAKAN JIKA PELANGGAN HANTAR RESIT / MAKLUMAT BAYARAN SELESAI
+        if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_obj.get("type") == "image":
+            # Data contoh tempahan dikumpul daripada sesi pelanggan (boleh diubah mengikut database memori anda)
+            data_tempahan_baru = {
+                "ref_id": f"SB-{sender_phone[-4:]}",
+                "nama": f"Pelanggan ({sender_phone})",
+                "no_tel": sender_phone,
+                "tarikh": "Disemak melalui WhatsApp",
+                "pickup": "Mengikut Sesi Sembang",
+                "dropoff": "Mengikut Sesi Sembang",
+                "harga": 0.00,
+                "status_bayaran": "Resit/Bayaran Dihantar oleh Pelanggan"
+            }
+
+            # A. Hantar Emel ke sbleisuretranspot.my@gmail.com
+            sop_payment.hantar_emel_admin(data_tempahan_baru)
+
+            # B. Hantar Notifikasi WhatsApp ke Nombor Admin Rasmi: 60132434200
+            admin_phone = "60132434200"
+            teks_admin = sop_payment.format_admin_notification(data_tempahan_baru)
+            hantar_teks_whatsapp(admin_phone, teks_admin)
+
+            # Balas kepada pelanggan
+            balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan dihantar kepada pihak pengurusan (Admin) untuk disemak. Kami akan sahkan sebentar lagi."
+            hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
+            
+            return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
+
+        # 3. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)
+        if message_text:
+            jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
+            hantar_teks_whatsapp(sender_phone, jawapan_ai)
 
         return jsonify({"status": "success", "action": "sent_ai_response"}), 200
 
