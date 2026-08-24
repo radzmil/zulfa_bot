@@ -128,6 +128,10 @@ def bina_system_instruction():
     14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang).
     15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip.
     16. Sentiasa pastikan respons pendek, padat, dan mesra WhatsApp.
+    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin).
+    17. **SOALAN DI LUAR KAWALAN / BUNTU:** Jika anda tidak tahu menjawab soalan pelanggan:
+        - Jika status semasa adalah **DALAM WAKTU PEJABAT**, beritahu: "Baik, saya rujuk soalan ni pada pihak admin sebentar ye. Mohon tunggu sekejap."
+        - Jika status semasa adalah **DI LUAR WAKTU PEJABAT / CUTI**, beritahu: "Maaf bos, sekarang di luar waktu pejabat (Isnin-Jumaat 8pg-5ptg). Pihak admin akan semak mesej Tuan/Puan esok/pada hari bekerja."
 
     === BORANG ONE WAY ===
     Terima kasih kerana berminat dengan perkhidmatan sewaan Mpv/Van/Bas persiaran   
@@ -239,3 +243,48 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     except Exception as e:
         logging.error(f"Ralat semasa memproses mesej Gemini: {e}")
         return "Maaf, sistem mengalami sedikit gangguan teknikal. Sila cuba sebentar lagi atau hubungi pegawai kami."
+
+    from datetime import datetime
+import pytz  # Pastikan pytz ada atau guna masa tempatan Malaysia
+
+def bina_system_instruction():
+    """Membina System Instruction dinamik daripada pelbagai modul tempatan."""
+    profil_text = sbleisure_profile.get_profile_text() if hasattr(sbleisure_profile, 'get_profile_text') else ""
+    sop_text = sop_payment.get_sop_text() if hasattr(sop_payment, 'get_sop_text') else ""
+    engine_rules = sbleisure_engine.get_engine_rules_text() if hasattr(sbleisure_engine, 'get_engine_rules_text') else ""
+    persona_text = get_zulfa_persona()
+
+    # Baca nota tambahan daripada admin jika ada
+    admin_notes = ""
+    if os.path.exists("admin_memory.txt"):
+        with open("admin_memory.txt", "r", encoding="utf-8") as f:
+            admin_notes = f.read()
+
+    # SEMAKAN MASA REAL-TIME MALAYSIA
+    tz_malaysia = pytz.timezone('Asia/Kuala_Lumpur')
+    sekarang = datetime.now(tz_malaysia)
+    hari_ini = sekarang.strftime('%A') # Contoh: Monday, Tuesday, etc.
+    jam_semasa = sekarang.strftime('%H:%M')
+    angka_hari = sekarang.weekday() # 0=Isnin hingga 4=Jumaat, 5=Sabtu, 6=Ahad
+    jam_angka = sekarang.hour
+
+    # Tentukan status waktu pejabat (Isnin-Jumaat, 8 pagi - 5 petang)
+    is_waktu_pejabat = True
+    if angka_hari >= 5: # Sabtu atau Ahad
+        is_waktu_pejabat = False
+    elif jam_angka < 8 or jam_angka >= 17: # Sebelum 8 pagi atau selepas 5 petang
+        is_waktu_pejabat = False
+
+    status_waktu = "DALAM WAKTU PEJABAT (Isnin-Jumaat, 8pg-5ptg)" if is_waktu_pejabat else "DI LUAR WAKTU PEJABAT / CUTI (Sabtu/Ahad atau selepas 5ptg)"
+
+    system_prompt = f"""
+    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport.
+    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional.
+
+    === STATUS MASA SEMASA (REAL-TIME) ===
+    - Hari & Masa: {hari_ini}, {jam_semasa} (Waktu Malaysia)
+    - Status: {status_waktu}
+
+    === NOTA KAS & ARAHAN TERKINI DARIPADA ADMIN ===
+    {admin_notes}
+    ...
