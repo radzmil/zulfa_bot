@@ -162,6 +162,7 @@ def bina_system_instruction():
     20. Hanya sewa bas DIBENARKAN untuk tempahan online, Van,mpv dan suv TIDAK DIBENARKAN untuk tempahan online terus beri link wahatsapp sales
     21. WAJIB isi borang dulu sebelum bagi harga dan wajib isi semua detail unutk one way atau two way.
     22. Harga sewaan boleh rujuk sbleisure_engine
+    22. Memberi perkhidmatan yang terbaik dan menjadi pekrja yang terbaik dan sentiasa menitik beratkan panduan dan sop yang diberikan.
 
     === NOTA KHAS & ARAHAN TERKINI DARIPADA ADMIN ===
     {admin_notes}
