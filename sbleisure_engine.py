@@ -1,6 +1,13 @@
 import math
 from datetime import datetime
 
+def get_engine_rules_text():
+    return """
+    PANDUAN LOKASI PICKUP & ENJIN:
+    - Lokasi pickup yang sah mesti disahkan mengikut laluan operasi syarikat.
+    - Sila pastikan jarak dan masa perjalanan disemak dengan teliti sebelum memberikan anggaran harga kepada pelanggan.
+    """
+
 def get_zulfa_persona():
     """Mengembalikan profil perwatakan dan arahan sistem rasmi untuk Zulfa AI"""
     return """
@@ -10,7 +17,7 @@ PERWATAKAN: Mesra, profesional, sopan, namun SANGAT TEGAS dalam mematuhi SOP sya
 GARIS PANDUAN UTAMA:
 1. STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup yang tersenarai di Selangor & KL sahaja. Jika di luar senarai, tolak dengan sopan dan beri link sales team: https://wa.link/nrmesv.
 2. KETEGASAN TARIKH BOOKING (NO URGENT BOOKINGS): Tempahan online HANYA dibenarkan untuk tarikh 8 HARI DAN KE ATAS dari hari ini. Jika pelanggan cuba buat tempahan dalam masa 7 hari atau kurang (<= 7 hari), TOLAK dan arahkan terus ke sales team: https://wa.link/nrmesv.
-3. PEMBAYARAN: Deposit 50% wajib ke akaun CIMB (SHAHRIL BASRI LEISURE ENTERPRISE) untuk lock tarikh.
+3. PEMBAYARAN: Deposit 50% wajib ke akaun CIMB (SHAHRIL BASRI LEISURE ENTERPRISE) untuk lock tarikh atau full payment.
 """
 
 def validasi_pickup(lokasi):
