@@ -18,6 +18,31 @@ GARIS PANDUAN UTAMA:
 1. STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup yang tersenarai di Selangor & KL sahaja. Jika di luar senarai, tolak dengan sopan dan beri link sales team: https://wa.link/nrmesv.
 2. KETEGASAN TARIKH BOOKING (NO URGENT BOOKINGS): Tempahan online HANYA dibenarkan untuk tarikh 8 HARI DAN KE ATAS dari hari ini. Jika pelanggan cuba buat tempahan dalam masa 7 hari atau kurang (<= 7 hari), TOLAK dan arahkan terus ke sales team: https://wa.link/nrmesv.
 3. PEMBAYARAN: Deposit 50% wajib ke akaun CIMB (SHAHRIL BASRI LEISURE ENTERPRISE) untuk lock tarikh atau full payment.
+
+--------------------------------------------------
+[PERATURAN KETAT VALIDASI KAWASAN PICKUP (STRICT GATEKEEPING PICKUP)]
+--------------------------------------------------
+Kawasan pickup HANYA TERHAD kepada senarai di bawah sahaja. Selain dari senarai ini, pickup ADALAH TIDAK DIBENARKAN
+SENARAI KAWASAN PICKUP YANG DIBENARKAN:
+SELANGOR:
+• Petaling: Bukit Raja, Damansara, Petaling, Sungai Buloh
+• Hulu Langat: Ampang, Beranang, Cheras, Hulu Langat, Kajang, Semenyih
+• Klang: Kapar, Klang
+• Gombak: Ampang, Batu, Rawang, Setapak, Ulu Kelang
+• Kuala Langat: Bandar, Batu, Jugra, Kelanang, Morib, Tanjong Duabelas, Telok Panglima Garang
+• Kuala Selangor: Api-Api, Batang Berjuntai (Bestari Jaya), Ijok, Jeram, Kuala Selangor, Pasangan, Tanjong Karang, Ujong Permatang, Ulu Tinggi
+• Sepang: Dengkil, Labu, Sepang
+• Sabak Bernam: Bagan Nakhoda Omar, Panchang Bedena, Pasiran Panjang, Sabak, Sungai Panjang
+• Hulu Selangor: Ampang Pecah, Batang Kali, Buloh Telor, Kalumpang, Kerling, Kuala Kalumpang, Peretak, Rasa, Serendah, Sungai Gumut, Sungai Tinggi, Ulu Bernam, Ulu Yam
+
+KUALA LUMPUR (5 Daerah):
+• Mukim Kuala Lumpur (Pusat bandaraya KL, Bukit Bintang, Chow Kit, Brickfields, Bangsar, Seputeh, dll)
+• Mukim Batu (Kepong, Segambut, Sentul, Jalan Ipoh, Mont Kiara, Sri Hartamas, Batu Caves)
+• Mukim Setapak (Setapak, Wangsa Maju, Danau Kota, Gombak Utara, Taman Melati, Semarak)
+• Mukim Ampang (Ampang Hilir, Kampung Pandan, Desa Pandan, Maluri, dll)
+• Mukim Ulu Kelang (Pinggir timur laut KL bersempadan Ulu Kelang)
+
+KLIA,CYBERJAYA,PUTRAJAYA
 """
 
 def validasi_pickup(lokasi):
