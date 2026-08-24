@@ -52,8 +52,28 @@ def whatsapp_webhook():
     logging.info(f"Mesej diterima: {data}")
 
     try:
-        sender_phone = data.get("from", "60123456789")
-        message_text = data.get("message", "").strip()
+        # Ekstrak mesej masuk daripada struktur payload WhatsApp Cloud API
+        entry = data.get("entry", [])
+        if not entry:
+            return jsonify({"status": "ignored"}), 200
+            
+        changes = entry[0].get("changes", [])
+        if not changes:
+            return jsonify({"status": "ignored"}), 200
+            
+        value = changes[0].get("value", {})
+        messages = value.get("messages", [])
+        
+        if not messages:
+            return jsonify({"status": "ignored", "reason": "no messages array"}), 200
+
+        msg_obj = messages[0]
+        sender_phone = msg_obj.get("from")
+        
+        # Sokongan teks biasa
+        message_text = ""
+        if msg_obj.get("type") == "text":
+            message_text = msg_obj.get("text", {}).get("body", "").strip()
 
         if not message_text:
             return jsonify({"status": "ignored", "reason": "empty message"}), 200
@@ -90,13 +110,46 @@ def whatsapp_webhook():
 
 
 def hantar_teks_whatsapp(phone, text):
-    logging.info(f"Menghantar teks ke {phone}: {text}")
-    # Kod penghantaran API WhatsApp luaran boleh diletakkan di sini
+    token = os.getenv("WHATSAPP_TOKEN")
+    phone_number_id = os.getenv("PHONE_NUMBER_ID", "1274341599093050")
+    
+    url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "text",
+        "text": {"body": text},
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    logging.info(f"Respons hantar WhatsApp ke {phone}: {response.status_code} - {response.text}")
 
 
 def hantar_imej_whatsapp(phone, image_url, caption):
-    logging.info(f"Menghantar imej QR ke {phone} (URL: {image_url})")
-    # Kod penghantaran imej API WhatsApp luaran boleh diletakkan di sini
+    token = os.getenv("WHATSAPP_TOKEN")
+    phone_number_id = os.getenv("PHONE_NUMBER_ID", "1274341599093050")
+    
+    url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "messaging_product": "whatsapp",
+        "to": phone,
+        "type": "image",
+        "image": {
+            "link": image_url,
+            "caption": caption
+        }
+    }
+    
+    response = requests.post(url, json=payload, headers=headers)
+    logging.info(f"Respons hantar Imej QR: {response.status_code} - {response.text}")
 
 
 if __name__ == "__main__":
