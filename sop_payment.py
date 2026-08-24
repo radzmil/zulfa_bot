@@ -10,8 +10,8 @@ from email.mime.multipart import MIMEMultipart
 # Konstanta Admin Rasmi
 GROUP_ADMIN_NUMBER = "60132434200"
 ADMIN_EMAIL = "sbltransport.my@gmail.com"
-TOYYIBPAY_LINK = "https://toyyibpay.com"  # Ganti dengan pautan ToyyibPay sebenar jika ada
-QR_CODE_DIRECT_LINK = ""              # Masukkan pautan imej QR DuitNow jika ada
+TOYYIBPAY_LINK = "https://toyyibpay.com/sbl-online"  # <--- Pautan ToyyibPay rasmi syarikat
+QR_CODE_DIRECT_LINK = "https://i.ibb.co/YTP80GLk/Whats-App-Image-2026-08-19-at-9-27-28-PM.jpg"  # <--- Pautan QR CIMB rasmi syarikat
 
 def get_sop_payment_text():
     return """
