@@ -45,7 +45,7 @@ ADMIN_PHONE = "60132434200"
 
 @app.route("/webhook", methods=["POST"])
 def webhook():
->>>>>>> 002d667ef9161a34e9eaa187fab7ec7b6712108f
+https://web-production-07b92.up.railway.app/webhook
     data = request.json
     try:
 <<<<<<< HEAD
