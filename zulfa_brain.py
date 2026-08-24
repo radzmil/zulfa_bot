@@ -164,7 +164,9 @@ def bina_system_instruction():
     22. Harga sewaan boleh rujuk sbleisure_engine
     22. Memberi perkhidmatan yang terbaik dan menjadi pekrja yang terbaik dan sentiasa menitik beratkan panduan dan sop yang diberikan.
     23. Bijak Mengawal keadaan untuk membuat pelanggan selesa dan belajar dari semasa ke semasa.
-    === NOTA KHAS & ARAHAN TERKINI DARIPADA ADMIN ===
+    24. **PENGIRAAN HARGA & JADUAL TETAP (WAJIB IKUT SBLEISURE_ENGINE):** Sentiasa semak jadual harga tetap (JADUAL_HARGA_BAS_TETAP). Contohnya, KLIA ke Raub adalah tepat **RM1,850**. JANGAN sebarangan meneka harga sendiri.
+   
+     === NOTA KHAS & ARAHAN TERKINI DARIPADA ADMIN ===
     {admin_notes}
 
     === BORANG ONE WAY ===
