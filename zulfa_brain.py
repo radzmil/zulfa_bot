@@ -70,12 +70,12 @@ def kemaskini_konteks_pelanggan(no_telefon, mesej_user, mesej_zulfa, nama=None):
     if nama:
         memori[no_telefon]["nama"] = nama
 
-    # Simpan perbualan (Hadkan 10 perbualan terakhir untuk jimatkan token)
+    # Simpan perbualan (Hadkan 10 perbualan terakhir untuk jimatkan token)[cite: 2]
     sejarah = memori[no_telefon]["sejarah_mesej"]
     sejarah.append({"role": "user", "content": mesej_user, "timestamp": datetime.now().isoformat()})
     sejarah.append({"role": "assistant", "content": mesej_zulfa, "timestamp": datetime.now().isoformat()})
     
-    if len(sejarah) > 20:  # 10 pasang perbualan
+    if len(sejarah) > 20:  # 10 pasang perbualan[cite: 2]
         sejarah = sejarah[-20:]
         
     memori[no_telefon]["sejarah_mesej"] = sejarah
@@ -95,9 +95,37 @@ def bina_system_instruction():
     engine_rules = sbleisure_engine.get_engine_rules_text() if hasattr(sbleisure_engine, 'get_engine_rules_text') else ""
     persona_text = get_zulfa_persona()
 
+    # Baca nota tambahan daripada admin jika ada
+    admin_notes = ""
+    if os.path.exists("admin_memory.txt"):
+        with open("admin_memory.txt", "r", encoding="utf-8") as f:
+            admin_notes = f.read()
+
+    # SEMAKAN MASA REAL-TIME MALAYSIA
+    import pytz
+    tz_malaysia = pytz.timezone('Asia/Kuala_Lumpur')
+    sekarang = datetime.now(tz_malaysia)
+    hari_ini = sekarang.strftime('%A') 
+    jam_semasa = sekarang.strftime('%H:%M')
+    angka_hari = sekarang.weekday() 
+    jam_angka = sekarang.hour
+
+    # Tentukan status waktu pejabat (Isnin-Jumaat, 8 pagi - 5 petang)
+    is_waktu_pejabat = True
+    if angka_hari >= 5: 
+        is_waktu_pejabat = False
+    elif jam_angka < 8 or jam_angka >= 17: 
+        is_waktu_pejabat = False
+
+    status_waktu = "DALAM WAKTU PEJABAT (Isnin-Jumaat, 8pg-5ptg)" if is_waktu_pejabat else "DI LUAR WAKTU PEJABAT / CUTI (Sabtu/Ahad atau selepas 5ptg)"
+
     system_prompt = f"""
-    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport.
-    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional.
+    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport.[cite: 2]
+    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional.[cite: 2]
+
+    === STATUS MASA SEMASA (REAL-TIME) ===
+    - Hari & Masa: {hari_ini}, {jam_semasa} (Waktu Malaysia)
+    - Status: {status_waktu}
 
     === MAKLUMAT SYARIKAT & PROFIL ===
     {profil_text}
@@ -112,26 +140,29 @@ def bina_system_instruction():
     {persona_text}
     
     === PANDUAN NADA & PERILAKU ===
-    1. Guna bahasa Melayu yang mesra, sopan, dan santun (cth: "Tuan/Puan", "Boleh saya bantu?").
-    2. Jika pelanggan bertanya tentang kenderaan selain 'Bas' (seperti Van, MPV, SUV atau pakej Tour), secara automatik maklumkan bahawa tempahan perlu dibuat terus melalui sales team di pautan: https://wa.link/nrmesv
-    3. Jika tarikh tempahan kurang daripada 7 hari (urgent booking), rujuk pelanggan ke sales team.
-    4. Pastikan maklumat seperti Lokasi Pickup, Destinasi, Tarikh Pergi, Tarikh Balik (jika dua hala), dan Jumlah Pax lengkap sebelum memberikan quotation.
-    5. Apabila pelanggan bersedia membuat bayaran, tanya dahulu pilihan mereka: Adakah ingin membayar melalui (1) Imbasan QR Code DuitNow atau (2) Pautan Online Banking ToyyibPay (`https://toyyibpay.com/sbl-online`), serta ingatkan mereka boleh pilih sama ada Deposit 50% atau Bayaran Penuh (Full Payment). Selepas mereka pilih, barulah berikan pilihan tersebut.
-    6. Balas mesej pendek dan ringkas JANGAN jawab mesej dengan panjang.
-    7. Selepas dapat mesej pertama dari pelanggan, terus tanya nak sewa bas, van, mpv atau suv, selepas customer jawab tanya untuk one way atau two way.
-    8. One way terus bagi borang one way, two way terus bagi borang two way.
-    9. Borang wajib diisi sebelum soalan seterusnya.
-    10. Mesej seperti manusia yang natural.
-    11. Mesej shortform seperti manusia contoh (nk, x, dkt, nnti, bz, sori, lg).
-    12. Elakkan ulang soalan: Beritahu semak memori perbualan sebelumnya. Jika pelanggan sudah sebut jenis kenderaan (contoh: "bas") atau jenis trip, jangan tanya soalan itu lagi.
-    13. Guna bahasa Melayu santai, mesra, dan pandai ambil hati pelanggan (cth: "Baik bos", "Boleh je, tak ada masalah").
-    14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang).
-    15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip.
-    16. Sentiasa pastikan respons pendek, padat, dan mesra WhatsApp.
-    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin).
-    17. **SOALAN DI LUAR KAWALAN / BUNTU:** Jika anda tidak tahu menjawab soalan pelanggan:
-        - Jika status semasa adalah **DALAM WAKTU PEJABAT**, beritahu: "Baik, saya rujuk soalan ni pada pihak admin sebentar ye. Mohon tunggu sekejap."
-        - Jika status semasa adalah **DI LUAR WAKTU PEJABAT / CUTI**, beritahu: "Maaf bos, sekarang di luar waktu pejabat (Isnin-Jumaat 8pg-5ptg). Pihak admin akan semak mesej Tuan/Puan esok/pada hari bekerja."
+    1. Guna bahasa Melayu yang mesra, sopan, dan santun (cth: "Tuan/Puan", "Boleh saya bantu?").[cite: 2]
+    2. Jika pelanggan bertanya tentang kenderaan selain 'Bas' (seperti Van, MPV, SUV atau pakej Tour), secara automatik maklumkan bahawa tempahan perlu dibuat terus melalui sales team di pautan: https://wa.link/nrmesv[cite: 2]
+    3. Jika tarikh tempahan kurang daripada 7 hari (urgent booking), rujuk pelanggan ke sales team.[cite: 2]
+    4. Pastikan maklumat seperti Lokasi Pickup, Destinasi, Tarikh Pergi, Tarikh Balik (jika dua hala), dan Jumlah Pax lengkap sebelum memberikan quotation.[cite: 2]
+    5. Apabila pelanggan bersedia membuat bayaran, tanya dahulu pilihan mereka: Adakah ingin membayar melalui (1) Imbasan QR Code DuitNow atau (2) Pautan Online Banking ToyyibPay (`https://toyyibpay.com/sbl-online`), serta ingatkan mereka boleh pilih sama ada Deposit 50% atau Bayaran Penuh (Full Payment). Selepas mereka pilih, barulah berikan pilihan tersebut.[cite: 2]
+    6. Balas mesej pendek dan ringkas JANGAN jawab mesej dengan panjang.[cite: 2]
+    7. Selepas dapat mesej pertama dari pelanggan, terus tanya nak sewa bas, van, mpv atau suv, selepas customer jawab tanya untuk one way atau two way.[cite: 2]
+    8. One way terus bagi borang one way, two way terus bagi borang two way.[cite: 2]
+    9. Borang wajib diisi sebelum soalan seterusnya.[cite: 2]
+    10. Mesej seperti manusia yang natural.[cite: 2]
+    11. Mesej shortform seperti manusia contoh (nk, x, dkt, nnti, bz, sori, lg).[cite: 2]
+    12. Elakkan ulang soalan: Beritahu semak memori perbualan sebelumnya. Jika pelanggan sudah sebut jenis kenderaan (contoh: "bas") atau jenis trip, jangan tanya soalan itu lagi.[cite: 2]
+    13. Guna bahasa Melayu santai, mesra, dan pandai ambil hati pelanggan (cth: "Baik bos", "Boleh je, tak ada masalah").[cite: 2]
+    14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang).[cite: 2]
+    15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip.[cite: 2]
+    16. Sentiasa pastikan respons pendek, padat, dan mesra WhatsApp.[cite: 2]
+    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin).[cite: 2]
+    18. **SOALAN DI LUAR KAWALAN / BUNTU:** Jika anda tidak tahu menjawab soalan pelanggan:[cite: 2]
+        - Jika status semasa adalah **DALAM WAKTU PEJABAT**, beritahu: "Baik, saya rujuk soalan ni pada pihak admin sebentar ye. Mohon tunggu sekejap."[cite: 2]
+        - Jika status semasa adalah **DI LUAR WAKTU PEJABAT / CUTI**, beritahu: "Maaf bos, sekarang di luar waktu pejabat (Isnin-Jumaat 8pg-5ptg). Pihak admin akan semak mesej Tuan/Puan esok/pada hari bekerja."[cite: 2]
+
+    === NOTA KHAS & ARAHAN TERKINI DARIPADA ADMIN ===
+    {admin_notes}
 
     === BORANG ONE WAY ===
     Terima kasih kerana berminat dengan perkhidmatan sewaan Mpv/Van/Bas persiaran   
@@ -199,11 +230,11 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     if not client:
         return "Ralat: GEMINI_API_KEY tidak dikonfigurasikan dengan betul."
 
-    # 1. Dapatkan sejarah perbualan pelanggan
+    # 1. Dapatkan sejarah perbualan pelanggan[cite: 2]
     data_pelanggan = dapatkan_konteks_pelanggan(no_telefon)
     sejarah = data_pelanggan.get("sejarah_mesej", [])
 
-    # 2. Bina pesanan perbualan untuk Gemini API
+    # 2. Bina pesanan perbualan untuk Gemini API[cite: 2]
     contents = []
     for h in sejarah:
         contents.append(types.Content(
@@ -211,7 +242,7 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
             parts=[types.Part.from_text(text=h["content"])]
         ))
     
-    # Tambah mesej terkini daripada pengguna
+    # Tambah mesej terkini daripada pengguna[cite: 2]
     contents.append(types.Content(
         role="user",
         parts=[types.Part.from_text(text=mesej_user)]
@@ -226,7 +257,7 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     )
 
     try:
-        # 4. Panggil model Gemini 3.5 Flash Lite
+        # 4. Panggil model Gemini 3.5 Flash Lite[cite: 2]
         response = client.models.generate_content(
             model="gemini-3.5-flash-lite",
             contents=contents,
@@ -235,7 +266,7 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
         
         jawapan_zulfa = response.text.strip()
 
-        # 5. Kemaskini memori perbualan
+        # 5. Kemaskini memori perbualan[cite: 2]
         kemaskini_konteks_pelanggan(no_telefon, mesej_user, jawapan_zulfa, nama=nama_pelanggan)
 
         return jawapan_zulfa
@@ -243,48 +274,3 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     except Exception as e:
         logging.error(f"Ralat semasa memproses mesej Gemini: {e}")
         return "Maaf, sistem mengalami sedikit gangguan teknikal. Sila cuba sebentar lagi atau hubungi pegawai kami."
-
-    from datetime import datetime
-import pytz  # Pastikan pytz ada atau guna masa tempatan Malaysia
-
-def bina_system_instruction():
-    """Membina System Instruction dinamik daripada pelbagai modul tempatan."""
-    profil_text = sbleisure_profile.get_profile_text() if hasattr(sbleisure_profile, 'get_profile_text') else ""
-    sop_text = sop_payment.get_sop_text() if hasattr(sop_payment, 'get_sop_text') else ""
-    engine_rules = sbleisure_engine.get_engine_rules_text() if hasattr(sbleisure_engine, 'get_engine_rules_text') else ""
-    persona_text = get_zulfa_persona()
-
-    # Baca nota tambahan daripada admin jika ada
-    admin_notes = ""
-    if os.path.exists("admin_memory.txt"):
-        with open("admin_memory.txt", "r", encoding="utf-8") as f:
-            admin_notes = f.read()
-
-    # SEMAKAN MASA REAL-TIME MALAYSIA
-    tz_malaysia = pytz.timezone('Asia/Kuala_Lumpur')
-    sekarang = datetime.now(tz_malaysia)
-    hari_ini = sekarang.strftime('%A') # Contoh: Monday, Tuesday, etc.
-    jam_semasa = sekarang.strftime('%H:%M')
-    angka_hari = sekarang.weekday() # 0=Isnin hingga 4=Jumaat, 5=Sabtu, 6=Ahad
-    jam_angka = sekarang.hour
-
-    # Tentukan status waktu pejabat (Isnin-Jumaat, 8 pagi - 5 petang)
-    is_waktu_pejabat = True
-    if angka_hari >= 5: # Sabtu atau Ahad
-        is_waktu_pejabat = False
-    elif jam_angka < 8 or jam_angka >= 17: # Sebelum 8 pagi atau selepas 5 petang
-        is_waktu_pejabat = False
-
-    status_waktu = "DALAM WAKTU PEJABAT (Isnin-Jumaat, 8pg-5ptg)" if is_waktu_pejabat else "DI LUAR WAKTU PEJABAT / CUTI (Sabtu/Ahad atau selepas 5ptg)"
-
-    system_prompt = f"""
-    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport.
-    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional.
-
-    === STATUS MASA SEMASA (REAL-TIME) ===
-    - Hari & Masa: {hari_ini}, {jam_semasa} (Waktu Malaysia)
-    - Status: {status_waktu}
-
-    === NOTA KAS & ARAHAN TERKINI DARIPADA ADMIN ===
-    {admin_notes}
-    ...
