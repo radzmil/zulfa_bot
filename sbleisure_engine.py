@@ -73,7 +73,7 @@ JADUAL_HARGA_BAS_TETAP = {
     ("klia", "bukit beruntung"): 1024,
     ("ampang", "kalumpang"): 989,
     ("klia", "kalumpang"): 1225,
-    ("ampang", "tanjung malim"): 1010,
+    ("ampang", "tanjung malim"): 980,
     ("klia", "tanjung malim"): 1250,
     ("ampang", "sungai gabai"): 900,
     ("ampang", "janda baik"): 1000,
