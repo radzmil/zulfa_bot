@@ -26,7 +26,16 @@ def proses_mesej(sender_phone, message_text):
                 f"Pihak Shahril Basri Leisure Enterprise sentiasa menitikberatkan aspek keselamatan pemanduan terutamanya untuk destinasi riadah dan berbukit. "
                 f"Ada maklumat tambahan mengenai jumlah penumpang untuk trip ini?"
             )
-# Konfigurasi Logging
+    # 2. PROSES UTAMA MELALUI AI GEMINI (UNTUK PERBUALAN LAIN)
+    try:
+        chat_session = model.start_chat(history=[])
+        response = chat_session.send_message(message_text)
+        return response.text
+    except Exception as e:
+        print(f"Ralat pada zulfa_brain: {e}")
+        return "Maaf, sistem sedang sibuk sedikit sekarang. Boleh ulang semula pertanyaan anda?"
+
+    # Konfigurasi Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 load_dotenv()
