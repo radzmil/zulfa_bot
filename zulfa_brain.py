@@ -233,6 +233,98 @@ def bina_system_instruction():
 
     T.KASIH😊
     """
+    DESTINASI_SEMENANJUNG_MENARIK_SELURUH_SEMENANJUNGM_ALAYSIA= {
+    "johor": [
+        "Legoland Malaysia, Iskandar Puteri",
+        "Desaru Coast & Pantai Desaru",
+        "Taman Negara Johor Endau-Rompin",
+        "Bandar Raya Johor Bahru (Jalan Wong Ah Fook / Danga Bay)"
+    ],
+    "kedah": [
+        "Pulau Langkawi (Melalui Jetty Kuah/Kuala Kedah)",
+        "Gunung Keriang",
+        "Puncak Yan (Jerai Geopark)",
+        "Pekan Rabu Alor Setar"
+    ],
+    "kelantan": [
+        "Pasar Siti Khadijah, Kota Bharu",
+        "Pantai Irama, Bachok",
+        "Jambatan Sultan Yahya Petra",
+        "Rantau Panjang (Beli-belah Bebas Cukai)"
+    ],
+    "melaka": [
+        "Jonker Walk & Bandar Hilir",
+        "Kota A Famosa & Menara Taming Sari",
+        "Masjid Selat Melaka",
+        "Ayer Keroh (Zoo Melaka / Taman Rama-rama)"
+    ],
+    "negeri sembilan": [
+        "Pantai Teluk Kemang, Port Dickson",
+        "Muzium Diraja Seri Menanti, Kuala Pilah",
+        "Hutan Lipur Ulu Bendul, Seremban",
+        "Pusat Falc Baitul Hilal, Teluk Kemang"
+    ],
+    "pahang": [
+        "Genting Highlands",
+        "Cameron Highlands",
+        "Taman Negara Pahang",
+        "Teluk Cempedak & Pantai Chendor, Kuantan"
+    ],
+    "perak": [
+        "Lost World of Tambun, Ipoh",
+        "Gua Tempurung, Gopeng",
+        "Pulau Pangkor (Jeti Lumut)",
+        "Kellie's Castle, Batu Gajah"
+    ],
+    "perlis": [
+        "Gua Kelam, Kaki Bukit",
+        "Wang Kelian (Viewpoint Negeri Di Bawah Bayu)",
+        "Kota Kayang Museum",
+        "Taman Herba Perlis"
+    ],
+    "pulau pinang": [
+        "Georgetown (UNESCO Heritage Sites)",
+        "Bukit Bendera (Penang Hill)",
+        "Taman Tema Escape & Entopia, Teluk Bahang",
+        "Padang Kota Lama (Gurney Bay)"
+    ],
+    "selangor": [
+        "i-City Shah Alam",
+        "Bukit Melawati & Kelip-kelip Kuala Selangor",
+        "FRIM Kepong (Taman Botani)",
+        "Sky Mirror Kuala Selangor"
+    ],
+    "terengganu": [
+        "Pulau Redang / Pulau Perhentian (Jeti Merang/Besut)",
+        "Pasar Besar Kedai Payang, Kuala Terengganu",
+        "Kampung Cina Terengganu",
+        "Tasik Kenyir, Hulu Terengganu"
+    ],
+    "kuala lumpur": [
+        "Menara Berkembar Petronas (KLCC) & KL Tower",
+        "Bukit Bintang & Lalaport",
+        "Merdeka 118 & Dataran Merdeka",
+        "Taman Tasik Titiwangsa"
+    ],
+    "putrajaya": [
+        "Masjid Putra & Mercu Tanda Putrajaya",
+        "Tasik Putrajaya (Cruise Tasik Putrajaya)",
+        "Taman Botani Putrajaya",
+        "Kompleks Perbadanan Putrajaya"
+    ]
+}
+
+def cari_tempat_menarik(negeri_atau_lokasi):
+    """Fungsi carian destinasi mengikut negeri di Semenanjung Malaysia"""
+    query = negeri_atau_lokasi.lower()
+    for negeri, senarai in DESTINASI_SEMENANJUNG.items():
+        if negeri in query:
+            return negeri.title(), senarai
+    return None, []
+
+def senaraikan_semua_negeri():
+    """Mengembalikan senarai nama negeri yang tersedia"""
+    return list(DESTINASI_SEMENANJUNG.keys())
     return system_prompt
 
 def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
