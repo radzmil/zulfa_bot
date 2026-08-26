@@ -3,15 +3,29 @@ import json
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
-
-# Import Google GenAI SDK
-from google import genai
-from google.genai import types
-
-# Import modul-modul tempatan
+import google.generativeai as genai
+import tempat_menarik
+import info_jalan
 import sbleisure_profile
 import sop_payment
 import sbleisure_engine
+
+# ... (tetapan model & konfigurasi lain) ...
+
+def proses_mesej(sender_phone, message_text):
+    message_lower = message_text.lower()
+    
+    # Semak jika perbincangan melibatkan jalan berbukit, sempit atau rekreasi sungai
+    if any(kunci in message_lower for kunci in ["bukit", "sempit", "sungai", "riadah", "rekreasi", "selekoh", "air terjun"]):
+    info_jalan_khas = info_jalan.semak_struktur_jalan_khas(message_text)
+    if info_jalan_khas:
+    return (
+    f"🚌 **Info Logistik & Keselamatan Laluan ({info_jalan_khas['kategori']}):**\n\n"
+    f"• **Contoh Lokasi:** {info_jalan_khas['contoh_lokasi']}\n"
+    f"• **Aspek Teknikal Bas:** {info_jalan_khas['panduan_bas']}\n\n"
+    f"Pihak Shahril Basri Leisure Enterprise sentiasa menitikberatkan aspek keselamatan pemanduan terutamanya untuk destinasi riadah dan berbukit. "
+    f"Ada maklumat tambahan mengenai jumlah penumpang untuk trip ini?"
+    )
 
 # Konfigurasi Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
