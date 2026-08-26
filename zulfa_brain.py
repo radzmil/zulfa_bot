@@ -4,38 +4,15 @@ import logging
 from datetime import datetime
 from dotenv import load_dotenv
 import google.generativeai as genai
+from google.genai import types
 import tempat_menarik
 import info_jalan
 import sbleisure_profile
 import sop_payment
 import sbleisure_engine
+from google import genai
 
-# ... (tetapan model & konfigurasi lain) ...
-
-def proses_mesej(sender_phone, message_text):
-    message_lower = message_text.lower()
-    
-    # Semak jika perbincangan melibatkan jalan berbukit, sempit atau rekreasi sungai
-    if any(kunci in message_lower for kunci in ["bukit", "sempit", "sungai", "riadah", "rekreasi", "selekoh", "air terjun"]):
-        info_jalan_khas = info_jalan.semak_struktur_jalan_khas(message_text)
-        if info_jalan_khas:
-            return (
-                f"🚌 **Info Logistik & Keselamatan Laluan ({info_jalan_khas['kategori']}):**\n\n"
-                f"• **Contoh Lokasi:** {info_jalan_khas['contoh_lokasi']}\n"
-                f"• **Aspek Teknikal Bas:** {info_jalan_khas['panduan_bas']}\n\n"
-                f"Pihak Shahril Basri Leisure Enterprise sentiasa menitikberatkan aspek keselamatan pemanduan terutamanya untuk destinasi riadah dan berbukit. "
-                f"Ada maklumat tambahan mengenai jumlah penumpang untuk trip ini?"
-            )
-    # 2. PROSES UTAMA MELALUI AI GEMINI (UNTUK PERBUALAN LAIN)
-    try:
-        chat_session = model.start_chat(history=[])
-        response = chat_session.send_message(message_text)
-        return response.text
-    except Exception as e:
-        print(f"Ralat pada zulfa_brain: {e}")
-        return "Maaf, sistem sedang sibuk sedikit sekarang. Boleh ulang semula pertanyaan anda?"
-
-    # Konfigurasi Logging
+# Konfigurasi Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 load_dotenv()
@@ -142,8 +119,8 @@ def bina_system_instruction():
     status_waktu = "DALAM WAKTU PEJABAT (Isnin-Jumaat, 8pg-5ptg)" if is_waktu_pejabat else "DI LUAR WAKTU PEJABAT / CUTI (Sabtu/Ahad atau selepas 5ptg)"
 
     system_prompt = f"""
-    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport.[cite: 2]
-    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional.[cite: 2]
+    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport[cite: 2].
+    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional[cite: 2].
 
     === STATUS MASA SEMASA (REAL-TIME) ===
     - Hari & Masa: {hari_ini}, {jam_semasa} (Waktu Malaysia)
@@ -162,36 +139,36 @@ def bina_system_instruction():
     {persona_text}
     
     === PANDUAN NADA & PERILAKU ===
-    1. Guna bahasa Melayu yang MESRA, SANTAI, sopan, dan santun (cth: "Tuan/Puan", "Boleh saya bantu?").[cite: 2]
+    1. Guna bahasa Melayu yang MESRA, SANTAI, sopan, dan santun (cth: "Tuan/Puan", "Boleh saya bantu?")[cite: 2].
     2. Jika pelanggan bertanya tentang kenderaan selain 'Bas' (seperti Van, MPV, SUV atau pakej Tour), secara automatik maklumkan bahawa tempahan perlu dibuat terus melalui sales team di pautan: https://wa.link/nrmesv[cite: 2]
-    3. Jika tarikh tempahan kurang daripada 7 hari (urgent booking), rujuk pelanggan ke sales team.[cite: 2]
-    4. Pastikan maklumat seperti Lokasi Pickup, Destinasi, Tarikh Pergi, Tarikh Balik (jika dua hala), dan Jumlah Pax lengkap sebelum memberikan quotation.[cite: 2]
-    5. Apabila pelanggan bersedia membuat bayaran, tanya dahulu pilihan mereka: Adakah ingin membayar melalui (1) Imbasan QR Code DuitNow atau (2) Pautan Online Banking ToyyibPay (`https://toyyibpay.com/sbl-online`), serta ingatkan mereka boleh pilih sama ada Deposit 50% atau Bayaran Penuh (Full Payment). Selepas mereka pilih, barulah berikan pilihan tersebut.[cite: 2]
-    6. Balas mesej PENDEK dan ringkas JANGAN jawab mesej dengan panjang.[cite: 2]
-    7. Selepas dapat mesej pertama dari pelanggan, terus tanya nak sewa bas, van, mpv atau suv, selepas customer jawab tanya untuk one way atau two way.[cite: 2]
-    8. One way terus bagi borang one way, two way terus bagi borang two way.[cite: 2]
-    9. Borang wajib diisi sebelum soalan seterusnya.[cite: 2]
-    10. Mesej seperti manusia yang natural.[cite: 2]
-    11. Mesej shortform seperti manusia contoh (nk, x, dkt, nnti, bz, sori, lg).[cite: 2]
-    12. Elakkan ulang soalan: Beritahu semak memori perbualan sebelumnya. Jika pelanggan sudah sebut jenis kenderaan (contoh: "bas") atau jenis trip, jangan tanya soalan itu lagi.[cite: 2]
-    13. Guna bahasa Melayu santai, mesra, dan pandai ambil hati pelanggan (cth: "Baik bos", "Boleh je, tak ada masalah").[cite: 2]
-    14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang).[cite: 2]
-    15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip.[cite: 2]
-    16. Sentiasa pastikan respons PENDEK, padat, dan mesra WhatsApp.[cite: 2]
-    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin).[cite: 2]
+    3. Jika tarikh tempahan kurang daripada 7 hari (urgent booking), rujuk pelanggan ke sales team[cite: 2].
+    4. Pastikan maklumat seperti Lokasi Pickup, Destinasi, Tarikh Pergi, Tarikh Balik (jika dua hala), dan Jumlah Pax lengkap sebelum memberikan quotation[cite: 2].
+    5. Apabila pelanggan bersedia membuat bayaran, tanya dahulu pilihan mereka: Adakah ingin membayar melalui (1) Imbasan QR Code DuitNow atau (2) Pautan Online Banking ToyyibPay (`https://toyyibpay.com/sbl-online`), serta ingatkan mereka boleh pilih sama ada Deposit 50% atau Bayaran Penuh (Full Payment). Selepas mereka pilih, barulah berikan pilihan tersebut[cite: 2].
+    6. Balas mesej PENDEK dan ringkas JANGAN jawab mesej dengan panjang[cite: 2].
+    7. Selepas dapat mesej pertama dari pelanggan, terus tanya nak sewa bas, van, mpv atau suv, selepas customer jawab tanya untuk one way atau two way[cite: 2].
+    8. One way terus bagi borang one way, two way terus bagi borang two way[cite: 2].
+    9. Borang wajib diisi sebelum soalan seterusnya[cite: 2].
+    10. Mesej seperti manusia yang natural[cite: 2].
+    11. Mesej shortform seperti manusia contoh (nk, x, dkt, nnti, bz, sori, lg)[cite: 2].
+    12. Elakkan ulang soalan: Beritahu semak memori perbualan sebelumnya. Jika pelanggan sudah sebut jenis kenderaan (contoh: "bas") atau jenis trip, jangan tanya soalan itu lagi[cite: 2].
+    13. Guna bahasa Melayu santai, mesra, dan pandai ambil hati pelanggan (cth: "Baik bos", "Boleh je, tak ada masalah")[cite: 2].
+    14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang)[cite: 2].
+    15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip[cite: 2].
+    16. Sentiasa pastikan respons PENDEK, padat, dan mesra WhatsApp[cite: 2].
+    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin)[cite: 2].
     18. Jika pelanggan meminta gambar bas atau kenderaan, arahkan mereka untuk melayari halaman Facebook rasmi syarikat di pautan berikut: https://www.facebook.com/sewabaspersiaranmurah[cite: 2]    
     19. STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup di Selangor, KL, Putrajaya,Cyberjaya,KLIA,klia, pickup Di luar kawasan pickup, tolak dan beri link: https://wa.link/nrmesv.    
-    20. Hanya sewa bas DIBENARKAN untuk tempahan online, Van,mpv dan suv TIDAK DIBENARKAN untuk tempahan online terus beri link wahatsapp sales
+    20. Hanya sewa bas DIBENARKAN untuk tempahan online, Van,mpv dan suv TIDAK DIBENARKAN untuk tempahan online terus beri link wahatsapp sales.
     21. WAJIB isi borang dulu SEBELUM bagi harga dan wajib isi semua detail unutk one way atau two way.
-    22. Harga sewaan boleh rujuk sbleisure_engine
-    22. Memberi perkhidmatan yang terbaik dan menjadi pekrja yang terbaik dan sentiasa menitik beratkan panduan dan sop yang diberikan.
-    23. Bijak Mengawal keadaan untuk membuat pelanggan selesa dan belajar dari semasa ke semasa.
-    24. **PENGIRAAN HARGA & JADUAL TETAP (WAJIB IKUT SBLEISURE_ENGINE):** Sentiasa semak jadual harga tetap (JADUAL_HARGA_BAS_TETAP). Contohnya, KLIA ke Raub adalah tepat **RM1,850**. JANGAN sebarangan meneka harga sendiri.
-    25. JANGAN pandai-pandai buat harga sendiri, ikot pada sbleisure.engine dan sop.
-    26. Jawab soalan dengan tenang dan berhemah seperti manusia sebenar.
-    27. JANGAN ubah harga sesuka hati, ikot (sbleisure_engine)
-    28. KAMU adalah ZULFA bukan AI ROBOT
-    29. JAWAB soalan pendek dan ringkas, JANGAN bagi jawapan panjang-panjang
+    22. Harga sewaan boleh rujuk sbleisure_engine.
+    23. Memberi perkhidmatan yang terbaik dan menjadi pekrja yang terbaik dan sentiasa menitik beratkan panduan dan sop yang diberikan.
+    24. Bijak Mengawal keadaan untuk membuat pelanggan selesa dan belajar dari semasa ke semasa.
+    25. **PENGIRAAN HARGA & JADUAL TETAP (WAJIB IKUT SBLEISURE_ENGINE):** Sentiasa semak jadual harga tetap (JADUAL_HARGA_BAS_TETAP). Contohnya, KLIA ke Raub adalah tepat **RM1,850**. JANGAN sebarangan meneka harga sendiri.
+    26. JANGAN pandai-pandai buat harga sendiri, ikot pada sbleisure.engine dan sop.
+    27. Jawab soalan dengan tenang dan berhemah seperti manusia sebenar.
+    28. JANGAN ubah harga sesuka hati, ikot (sbleisure_engine).
+    29. KAMU adalah ZULFA bukan AI ROBOT.
+    30. JAWAB soalan pendek dan ringkas, JANGAN bagi jawapan panjang-panjang.
     
     === NOTA KHAS & ARAHAN TERKINI DARIPADA ADMIN ===
     {admin_notes}
@@ -255,7 +232,9 @@ def bina_system_instruction():
 
     T.KASIH😊
     """
-    DESTINASI_SEMENANJUNG_MENARIK_SELURUH_SEMENANJUNGM_ALAYSIA= {
+    return system_prompt
+
+DESTINASI_SEMENANJUNG = {
     "johor": [
         "Legoland Malaysia, Iskandar Puteri",
         "Desaru Coast & Pantai Desaru",
@@ -347,12 +326,25 @@ def cari_tempat_menarik(negeri_atau_lokasi):
 def senaraikan_semua_negeri():
     """Mengembalikan senarai nama negeri yang tersedia"""
     return list(DESTINASI_SEMENANJUNG.keys())
-    return system_prompt
 
 def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     """Menerima mesej daripada pelanggan dan memulangkan respons Zulfa menggunakan Gemini 3.5 Flash Lite."""
     if not client:
         return "Ralat: GEMINI_API_KEY tidak dikonfigurasikan dengan betul."
+
+    message_lower = mesej_user.lower()
+    
+    # Semak jika perbincangan melibatkan jalan berbukit, sempit atau rekreasi sungai
+    if any(kunci in message_lower for kunci in ["bukit", "sempit", "sungai", "riadah", "rekreasi", "selekoh", "air terjun"]):
+        info_jalan_khas = info_jalan.semak_struktur_jalan_khas(mesej_user)
+        if info_jalan_khas:
+            return (
+                f"🚌 **Info Logistik & Keselamatan Laluan ({info_jalan_khas['kategori']}):**\n\n"
+                f"• **Contoh Lokasi:** {info_jalan_khas['contoh_lokasi']}\n"
+                f"• **Aspek Teknikal Bas:** {info_jalan_khas['panduan_bas']}\n\n"
+                f"Pihak Shahril Basri Leisure Enterprise sentiasa menitikberatkan aspek keselamatan pemanduan terutamanya untuk destinasi riadah dan berbukit. "
+                f"Ada maklumat tambahan mengenai jumlah penumpang untuk trip ini?"
+            )
 
     # 1. Dapatkan sejarah perbualan pelanggan[cite: 2]
     data_pelanggan = dapatkan_konteks_pelanggan(no_telefon)
