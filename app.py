@@ -93,10 +93,22 @@ def reply_chat():
         reply_text = data.get('text')
         target_phone = data.get('phone')
 
-        if target_phone:
-            clean_phone = target_phone.replace("+", "").strip()
-            hantar_teks_whatsapp(clean_phone, reply_text)
+        # Jika frontend tidak hantar 'phone', cari nombor telefon secara automatik berdasarkan chat_id
+        if not target_phone or target_phone == "None":
+            for client_key in live_chats_db:
+                for chat in live_chats_db[client_key]:
+                    if chat['id'] == chat_id:
+                        target_phone = chat.get('phone')
+                        break
 
+        # Hantar mesej ke WhatsApp jika nombor dan teks wujud
+        if target_phone and reply_text:
+            clean_phone = str(target_phone).replace("+", "").strip()
+            hantar_teks_whatsapp(clean_phone, reply_text)
+        else:
+            logging.warning(f"Gagal hantar WhatsApp: Nombor telefon tidak dijumpai untuk chat_id {chat_id}")
+
+        # Kemaskini rekod mesej di dalam memori portal
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
                 if chat['id'] == chat_id:
@@ -106,6 +118,7 @@ def reply_chat():
                 
         return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
     except Exception as e:
+        logging.error(f"Ralat pada /api/chats/reply: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/api/chats/toggle-mode", methods=["POST"])
