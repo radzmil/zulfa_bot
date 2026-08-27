@@ -18,7 +18,7 @@ import sop_payment
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
-CORS(app)  # Aktifkan CORS supaya Vercel frontend boleh akses API Flask di Railway
+CORS(app)  # Aktifkan CORS supaya frontend boleh akses API Flask di Railway[cite: 4]
 
 # Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
@@ -27,7 +27,6 @@ KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gamba
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
 # Simulasi database memori sementara untuk Live Chat & Kawalan Bot di LEEA Portal
-# Anda boleh tukar sambungkan ke database sebenar (cth: SQLite/PostgreSQL) nanti
 live_chats_db = [
     {
         "id": 1,
@@ -53,7 +52,7 @@ def index():
     }), 200
 
 # ==========================================
-# LALUAN API UNTUK LEEA PORTAL (VERCEL)
+# LALUAN API UNTUK LEEA PORTAL
 # ==========================================
 
 # 1. Tarik senarai klien untuk tab Dashboard
@@ -73,7 +72,7 @@ def get_clients_data():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# 2. Tarik senarai Live Chats & Mesej untuk Tab Live Chat & Kawalan Bot
+# 2. Tarik senarai Live Chats & Mesej untuk Tab Live Chat & Kawalan Bot[cite: 4]
 @app.route("/api/chats", methods=["GET"])
 def get_chats():
     try:
@@ -193,7 +192,7 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
-        # JIKA MOD ADALAH 'HUMAN', AI JANGAN BALAS AUTOMATIK (Biar ejen balas di portal)
+        # JIKA MOD ADALAH 'HUMAN', AI JANGAN BALAS AUTOMATIK
         if current_chat_mode == "human":
             logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
             return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
