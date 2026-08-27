@@ -57,7 +57,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.2"
+        "version": "2.3"
     }), 200
 
 @app.route("/api/clients", methods=["GET"])
@@ -93,7 +93,6 @@ def reply_chat():
         reply_text = data.get('text')
         target_phone = data.get('phone')
 
-        # Jika frontend tidak hantar 'phone', cari nombor telefon secara automatik berdasarkan chat_id
         if not target_phone or target_phone == "None":
             for client_key in live_chats_db:
                 for chat in live_chats_db[client_key]:
@@ -101,14 +100,12 @@ def reply_chat():
                         target_phone = chat.get('phone')
                         break
 
-        # Hantar mesej ke WhatsApp jika nombor dan teks wujud
         if target_phone and reply_text:
             clean_phone = str(target_phone).replace("+", "").strip()
             hantar_teks_whatsapp(clean_phone, reply_text)
         else:
             logging.warning(f"Gagal hantar WhatsApp: Nombor telefon tidak dijumpai untuk chat_id {chat_id}")
 
-        # Kemaskini rekod mesej di dalam memori portal
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
                 if chat['id'] == chat_id:
@@ -173,7 +170,7 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored", "reason": "no messages array"}), 200
 
         msg_obj = messages[0]
-        sender_phone = msg_obj.get("from")
+        sender_phone = str(msg_obj.get("from")).replace("+", "").strip()
         
         message_text = ""
         if msg_obj.get("type") == "text":
@@ -181,30 +178,36 @@ def whatsapp_webhook():
 
         message_lower = message_text.lower()
 
-        current_chat_mode = "ai"
         sbl_chats = live_chats_db.get("sbltransport", [])
         
         found_chat = None
         for chat in sbl_chats:
-            if chat.get("phone") == sender_phone or chat.get("phone") == f"+{sender_phone}":
+            db_phone = str(chat.get("phone", "")).replace("+", "").strip()
+            if db_phone == sender_phone:
                 found_chat = chat
                 break
 
+        # Jika tiada dalam senarai, masukkan pelanggan baharu secara dinamik
         if not found_chat:
-            found_chat = {
-                "id": len(sbl_chats) + 100,
-                "customerName": f"Pelanggan ({sender_phone})",
-                "phone": f"+{sender_phone.replace('+', '')}",
-                "lastMessage": message_text,
-                "time": datetime.now().strftime('%I:%M %p'),
-                "mode": "ai",
-                "messages": []
-            }
-            sbl_chats.append(found_chat)
+            admin_phone = "60132434200"
+            if sender_phone != admin_phone:
+                found_chat = {
+                    "id": len(sbl_chats) + 100,
+                    "customerName": f"Pelanggan ({sender_phone})",
+                    "phone": f"+{sender_phone}",
+                    "lastMessage": message_text,
+                    "time": datetime.now().strftime('%I:%M %p'),
+                    "mode": "ai",
+                    "messages": []
+                }
+                sbl_chats.append(found_chat)
 
-        current_chat_mode = found_chat.get("mode", "ai")
-        found_chat['messages'].append({"sender": "customer", "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
-        found_chat['lastMessage'] = message_text
+        if found_chat:
+            found_chat['messages'].append({"sender": "customer", "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
+            found_chat['lastMessage'] = message_text
+            current_chat_mode = found_chat.get("mode", "ai")
+        else:
+            current_chat_mode = "ai"
 
         admin_phone = "60132434200"
         if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
