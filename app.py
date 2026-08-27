@@ -32,6 +32,27 @@ def index():
         "version": "2.2"
     }), 200
 
+# Laluan API untuk membekalkan data kepada Portal Web LEEA di Vercel
+@app.route("/api/clients", methods=["GET"])
+def get_clients_data():
+    try:
+        # Data sementara / boleh diubah untuk baca terus dari sbleisure.db nanti
+        senarai_client = [
+            {
+                "ref_id": "SB-4200",
+                "nama": "Pelanggan Contoh",
+                "no_tel": "+60132434200",
+                "tarikh": "2026-08-27",
+                "status": "Aktif / Selesai"
+            }
+        ]
+        return jsonify({
+            "status": "success",
+            "data": senarai_client
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 # Laluan GET untuk pengesahan Meta Webhook
 @app.route("/webhook", methods=["GET"])
 def verify_whatsapp_webhook():
