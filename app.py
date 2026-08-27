@@ -20,10 +20,11 @@ CORS(app)
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
+# Struktur pangkalan data sembang langsung yang diseragamkan ID menggunakan nombor telefon
 live_chats_db = {
     "sbltransport": [
         {
-            "id": 101,
+            "id": "60132434200",
             "customerName": "Pelanggan Tempahan Transport",
             "phone": "+60132434200",
             "lastMessage": "Salam, nak tanya kadar sewaan bas/van ke Cameron Highlands?",
@@ -37,7 +38,7 @@ live_chats_db = {
     ],
     "aluzlia": [
         {
-            "id": 1,
+            "id": "60123456789",
             "customerName": "Ahmad bin Ali",
             "phone": "+60123456789",
             "lastMessage": "Berapa harga pakej sebulan?",
@@ -57,7 +58,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.3"
+        "version": "2.4"
     }), 200
 
 @app.route("/api/clients", methods=["GET"])
@@ -89,16 +90,12 @@ def get_chats():
 def reply_chat():
     try:
         data = request.json
-        chat_id = data.get('chat_id')
+        chat_id = str(data.get('chat_id')) # Pastikan format string (nombor telefon)
         reply_text = data.get('text')
         target_phone = data.get('phone')
 
         if not target_phone or target_phone == "None":
-            for client_key in live_chats_db:
-                for chat in live_chats_db[client_key]:
-                    if chat['id'] == chat_id:
-                        target_phone = chat.get('phone')
-                        break
+            target_phone = chat_id
 
         if target_phone and reply_text:
             clean_phone = str(target_phone).replace("+", "").strip()
@@ -106,14 +103,23 @@ def reply_chat():
         else:
             logging.warning(f"Gagal hantar WhatsApp: Nombor telefon tidak dijumpai untuk chat_id {chat_id}")
 
+        # Masukkan mesej ke dalam pangkalan data mengikut padanan ID (nombor telefon)
+        dijumpai = False
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
-                if chat['id'] == chat_id:
+                if str(chat['id']) == str(chat_id) or str(chat['phone']).replace("+", "") == str(chat_id).replace("+", ""):
                     chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
                     chat['lastMessage'] = reply_text
-                    return jsonify({"success": True, "message": "Mesej berjaya dihantar ke WhatsApp!"}), 200
-                
-        return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
+                    dijumpai = True
+                    break
+            if dijumpai:
+                break
+
+        if dijumpai:
+            return jsonify({"success": True, "message": "Mesej berjaya dihantar ke WhatsApp!"}), 200
+        else:
+            return jsonify({"success": False, "error": "Chat tidak dijumpai dalam database"}), 404
+
     except Exception as e:
         logging.error(f"Ralat pada /api/chats/reply: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
@@ -122,11 +128,11 @@ def reply_chat():
 def toggle_mode():
     try:
         data = request.json
-        chat_id = data.get('chat_id')
+        chat_id = str(data.get('chat_id'))
         
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
-                if chat['id'] == chat_id:
+                if str(chat['id']) == str(chat_id):
                     chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
                     return jsonify({"success": True, "mode": chat['mode']}), 200
                 
@@ -175,9 +181,10 @@ def whatsapp_webhook():
         message_text = ""
         if msg_obj.get("type") == "text":
             message_text = msg_obj.get("text", {}).get("body", "").strip()
+        elif msg_obj.get("type") == "image":
+            message_text = "[Gambar / Resit Dihantar]"
 
         message_lower = message_text.lower()
-
         sbl_chats = live_chats_db.get("sbltransport", [])
         
         found_chat = None
@@ -187,12 +194,12 @@ def whatsapp_webhook():
                 found_chat = chat
                 break
 
-        # Jika tiada dalam senarai, masukkan pelanggan baharu secara dinamik
+        # Jika pelanggan baru menghantar mesej WhatsApp, masukkan terus ke dalam senarai secara dinamik
         if not found_chat:
             admin_phone = "60132434200"
             if sender_phone != admin_phone:
                 found_chat = {
-                    "id": len(sbl_chats) + 100,
+                    "id": sender_phone, # Gunakan nombor telefon sebagai ID unik supaya sepadan dengan frontend
                     "customerName": f"Pelanggan ({sender_phone})",
                     "phone": f"+{sender_phone}",
                     "lastMessage": message_text,
@@ -256,9 +263,14 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
-        if message_text:
+        if message_text and message_text != "[Gambar / Resit Dihantar]":
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
+            
+            # Masukkan balasan AI ke dalam rekod database live chat
+            if found_chat:
+                found_chat['messages'].append({"sender": "ai", "text": jawapan_ai, "time": datetime.now().strftime('%I:%M %p')})
+                found_chat['lastMessage'] = jawapan_ai
 
         return jsonify({"status": "success", "action": "sent_ai_response"}), 200
 
@@ -293,9 +305,12 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"Bearer `token`", # Disesuaikan ikut token env
         "Content-Type": "application/json",
     }
+    # Menggunakan token env sebenar
+    headers["Authorization"] = f"Bearer {token}"
+    
     payload = {
         "messaging_product": "whatsapp",
         "to": clean_phone,
