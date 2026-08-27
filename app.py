@@ -3,45 +3,61 @@ import logging
 import requests
 from datetime import datetime
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Penting untuk benarkan LEEA Portal berhubung dengan Flask
+from flask_cors import CORS  # Penting untuk benarkan LEEA Portal berhubung dengan Flask[cite: 5]
 from dotenv import load_dotenv
 
-# Muat turun pembolehubah persekitaran daripada fail .env
+# Muat turun pembolehubah persekitaran daripada fail .env[cite: 5]
 load_dotenv()
 
-# Import modul projek Zulfa Bot
+# Import modul projek Zulfa Bot[cite: 5]
 import zulfa_brain
 import sbleisure_engine
 import sop_payment
 
-# Konfigurasi Logging
+# Konfigurasi Logging[cite: 5]
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
-CORS(app)  # Aktifkan CORS supaya frontend boleh akses API Flask di Railway[cite: 4]
+CORS(app)  # Aktifkan CORS supaya frontend boleh akses API Flask di Railway[cite: 4, 5]
 
-# Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan
+# Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan[cite: 5]
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 
-# Senarai kata kunci untuk mengesan penghantaran resit / bayaran selesai
+# Senarai kata kunci untuk mengesan penghantaran resit / bayaran selesai[cite: 5]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# Simulasi database memori sementara untuk Live Chat & Kawalan Bot di LEEA Portal
-live_chats_db = [
-    {
-        "id": 1,
-        "customerName": "Ahmad bin Ali",
-        "phone": "+60123456789",
-        "lastMessage": "Berapa harga pakej sebulan?",
-        "time": "11:02 AM",
-        "mode": "ai", # Pilihan: 'ai' atau 'human'
-        "messages": [
-            {"sender": "customer", "text": "Hi, selamat tengah hari.", "time": "11:00 AM"},
-            {"sender": "client", "text": "Hi Ahmad, ada apa yang boleh saya bantu?", "time": "11:01 AM"},
-            {"sender": "customer", "text": "Berapa harga pakej sebulan?", "time": "11:02 AM"}
-        ]
-    }
-]
+# Database memori sementara yang diasingkan mengikut Akaun Klien (Username Portal)
+live_chats_db = {
+    "sbltransport": [
+        {
+            "id": 101,
+            "customerName": "Pelanggan Tempahan Transport",
+            "phone": "+60132434200",
+            "lastMessage": "Salam, nak tanya kadar sewaan bas/van ke Cameron Highlands?",
+            "time": "12:30 PM",
+            "mode": "ai", # Pilihan: 'ai' atau 'human'
+            "messages": [
+                {"sender": "customer", "text": "Salam, nak tanya kadar sewaan bas/van ke Cameron Highlands?", "time": "12:30 PM"},
+                {"sender": "ai", "text": "Waalaikumussalam! Ya boleh. Sila nyatakan tarikh dan bilangan penumpang ya.", "time": "12:31 PM"}
+            ]
+        }
+    ],
+    "aluzlia": [
+        {
+            "id": 1,
+            "customerName": "Ahmad bin Ali",
+            "phone": "+60123456789",
+            "lastMessage": "Berapa harga pakej sebulan?",
+            "time": "11:02 AM",
+            "mode": "ai",
+            "messages": [
+                {"sender": "customer", "text": "Hi, selamat tengah hari.", "time": "11:00 AM"},
+                {"sender": "client", "text": "Hi Ahmad, ada apa yang boleh saya bantu?", "time": "11:01 AM"},
+                {"sender": "customer", "text": "Berapa harga pakej sebulan?", "time": "11:02 AM"}
+            ]
+        }
+    ]
+}
 
 @app.route("/", methods=["GET"])
 def index():
@@ -52,17 +68,17 @@ def index():
     }), 200
 
 # ==========================================
-# LALUAN API UNTUK LEEA PORTAL
+# LALUAN API UNTUK LEEA PORTAL[cite: 5]
 # ==========================================
 
-# 1. Tarik senarai klien untuk tab Dashboard
+# 1. Tarik senarai klien untuk tab Dashboard[cite: 5]
 @app.route("/api/clients", methods=["GET"])
 def get_clients_data():
     try:
         senarai_client = [
             {
                 "ref_id": "SB-4200",
-                "nama": "Pelanggan Contoh",
+                "nama": "Shahril Basri Leisure Enterprise (SBL Transport)",
                 "no_tel": "+60132434200",
                 "tarikh": "2026-08-27",
                 "status": "Aktif / Selesai"
@@ -72,49 +88,54 @@ def get_clients_data():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# 2. Tarik senarai Live Chats & Mesej untuk Tab Live Chat & Kawalan Bot[cite: 4]
+# 2. Tarik senarai Live Chats mengikut Akaun Klien (sbltransport / aluzlia)
 @app.route("/api/chats", methods=["GET"])
 def get_chats():
     try:
-        return jsonify({"success": True, "chats": live_chats_db}), 200
+        # Semak akaun klien yang dihantar dari frontend, laluan lalai adalah 'sbltransport'
+        client_name = request.args.get("client", "sbltransport")
+        chats = live_chats_db.get(client_name, live_chats_db.get("sbltransport", []))
+        return jsonify({"success": True, "chats": chats}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# 3. Hantar Mesej Balasan Manual daripada Ejen Portal ke WhatsApp Pelanggan
+# 3. Hantar Mesej Balasan Manual daripada Ejen Portal ke WhatsApp Pelanggan[cite: 5]
 @app.route("/api/chats/reply", methods=["POST"])
 def reply_chat():
     try:
         data = request.json
         chat_id = data.get('chat_id')
         reply_text = data.get('text')
-        target_phone = data.get('phone') # Nombor WhatsApp penerima
+        target_phone = data.get('phone') # Nombor WhatsApp penerima[cite: 5]
 
-        # Hantar mesej sebenar melalui WhatsApp Cloud API
+        # Hantar mesej sebenar melalui WhatsApp Cloud API[cite: 5]
         if target_phone and reply_text:
             hantar_teks_whatsapp(target_phone, reply_text)
 
-        # Kemaskini simpanan data live_chats_db
-        for chat in live_chats_db:
-            if chat['id'] == chat_id:
-                chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
-                chat['lastMessage'] = reply_text
-                return jsonify({"success": True, "message": "Mesej berjaya dihantar ke WhatsApp!"}), 200
+        # Kemaskini simpanan data di dalam live_chats_db
+        for client_key in live_chats_db:
+            for chat in live_chats_db[client_key]:
+                if chat['id'] == chat_id:
+                    chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
+                    chat['lastMessage'] = reply_text
+                    return jsonify({"success": True, "message": "Mesej berjaya dihantar ke WhatsApp!"}), 200
                 
         return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# 4. Tukar Mod Bot (AI Bot <-> Human Touch) melalui Portal
+# 4. Tukar Mod Bot (AI Bot <-> Human Touch) melalui Portal[cite: 5]
 @app.route("/api/chats/toggle-mode", methods=["POST"])
 def toggle_mode():
     try:
         data = request.json
         chat_id = data.get('chat_id')
         
-        for chat in live_chats_db:
-            if chat['id'] == chat_id:
-                chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
-                return jsonify({"success": True, "mode": chat['mode']}), 200
+        for client_key in live_chats_db:
+            for chat in live_chats_db[client_key]:
+                if chat['id'] == chat_id:
+                    chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
+                    return jsonify({"success": True, "mode": chat['mode']}), 200
                 
         return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
     except Exception as e:
@@ -122,7 +143,7 @@ def toggle_mode():
 
 
 # ==========================================
-# WHATSAPP WEBHOOK (META)
+# WHATSAPP WEBHOOK (META)[cite: 5]
 # ==========================================
 
 @app.route("/webhook", methods=["GET"])
@@ -171,17 +192,34 @@ def whatsapp_webhook():
 
         message_lower = message_text.lower()
 
-        # Semak sama ada nombor ini dalam mod 'human' di live chat portal
+        # Semak sama ada nombor ini dalam mod 'human' di live chat portal (Lalai: sbltransport)
         current_chat_mode = "ai"
-        for chat in live_chats_db:
+        sbl_chats = live_chats_db.get("sbltransport", [])
+        
+        found_chat = None
+        for chat in sbl_chats:
             if chat.get("phone") == sender_phone or chat.get("phone") == f"+{sender_phone}":
-                current_chat_mode = chat.get("mode", "ai")
-                # Kemaskini mesej masuk ke dalam live chat db untuk paparan portal
-                chat['messages'].append({"sender": "customer", "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
-                chat['lastMessage'] = message_text
+                found_chat = chat
                 break
 
-        # 0. KAWALAN KHAS ADMIN UNTUK NOTA (#nota / #ingat)
+        # Jika pengguna belum wujud di database memori sbltransport, bina baharu
+        if not found_chat:
+            found_chat = {
+                "id": len(sbl_chats) + 100,
+                "customerName": f"Pelanggan ({sender_phone})",
+                "phone": f"+{sender_phone.replace('+', '')}",
+                "lastMessage": message_text,
+                "time": datetime.now().strftime('%I:%M %p'),
+                "mode": "ai",
+                "messages": []
+            }
+            sbl_chats.append(found_chat)
+
+        current_chat_mode = found_chat.get("mode", "ai")
+        found_chat['messages'].append({"sender": "customer", "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
+        found_chat['lastMessage'] = message_text
+
+        # 0. KAWALAN KHAS ADMIN UNTUK NOTA (#nota / #ingat)[cite: 5]
         admin_phone = "60132434200"
         if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
             nota_baru = message_text.replace("#nota", "").replace("#NOTA", "").replace("#ingat", "").replace("#INGAT", "").strip()
@@ -192,12 +230,12 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
-        # JIKA MOD ADALAH 'HUMAN', AI JANGAN BALAS AUTOMATIK
+        # JIKA MOD ADALAH 'HUMAN', AI JANGAN BALAS AUTOMATIK[cite: 5]
         if current_chat_mode == "human":
             logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
             return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
 
-        # 1. SEMAKAN PERMINTAAN QR CODE
+        # 1. SEMAKAN PERMINTAAN QR CODE[cite: 5]
         if any(keyword in message_lower for keyword in KEYWORDS_QR):
             caption_teks = (
                 "Berikut adalah QR Code DuitNow CIMB rasmi **SHAHRIL BASRI LEISURE ENTERPRISE**.\n\n"
@@ -210,7 +248,7 @@ def whatsapp_webhook():
             hantar_imej_whatsapp(phone=sender_phone, image_url=qr_link, caption=caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
-        # 2. SEMAKAN JIKA PELANGGAN HANTAR RESIT / BAYARAN
+        # 2. SEMAKAN JIKA PELANGGAN HANTAR RESIT / BAYARAN[cite: 5]
         if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_obj.get("type") == "image":
             data_tempahan_baru = {
                 "ref_id": f"SB-{sender_phone[-4:]}",
@@ -232,7 +270,7 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
-        # 3. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)
+        # 3. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)[cite: 5]
         if message_text:
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
