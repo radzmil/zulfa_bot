@@ -3,6 +3,7 @@ import logging
 import requests
 from datetime import datetime
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Penting untuk benarkan LEEA Portal berhubung dengan Flask
 from dotenv import load_dotenv
 
 # Muat turun pembolehubah persekitaran daripada fail .env
@@ -17,12 +18,31 @@ import sop_payment
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
+CORS(app)  # Aktifkan CORS supaya Vercel frontend boleh akses API Flask di Railway
 
 # Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 
 # Senarai kata kunci untuk mengesan penghantaran resit / bayaran selesai
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
+
+# Simulasi database memori sementara untuk Live Chat & Kawalan Bot di LEEA Portal
+# Anda boleh tukar sambungkan ke database sebenar (cth: SQLite/PostgreSQL) nanti
+live_chats_db = [
+    {
+        "id": 1,
+        "customerName": "Ahmad bin Ali",
+        "phone": "+60123456789",
+        "lastMessage": "Berapa harga pakej sebulan?",
+        "time": "11:02 AM",
+        "mode": "ai", # Pilihan: 'ai' atau 'human'
+        "messages": [
+            {"sender": "customer", "text": "Hi, selamat tengah hari.", "time": "11:00 AM"},
+            {"sender": "client", "text": "Hi Ahmad, ada apa yang boleh saya bantu?", "time": "11:01 AM"},
+            {"sender": "customer", "text": "Berapa harga pakej sebulan?", "time": "11:02 AM"}
+        ]
+    }
+]
 
 @app.route("/", methods=["GET"])
 def index():
@@ -32,11 +52,14 @@ def index():
         "version": "2.2"
     }), 200
 
-# Laluan API untuk membekalkan data kepada Portal Web LEEA di Vercel
+# ==========================================
+# LALUAN API UNTUK LEEA PORTAL (VERCEL)
+# ==========================================
+
+# 1. Tarik senarai klien untuk tab Dashboard
 @app.route("/api/clients", methods=["GET"])
 def get_clients_data():
     try:
-        # Data sementara / boleh diubah untuk baca terus dari sbleisure.db nanti
         senarai_client = [
             {
                 "ref_id": "SB-4200",
@@ -46,14 +69,63 @@ def get_clients_data():
                 "status": "Aktif / Selesai"
             }
         ]
-        return jsonify({
-            "status": "success",
-            "data": senarai_client
-        }), 200
+        return jsonify({"status": "success", "data": senarai_client}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# Laluan GET untuk pengesahan Meta Webhook
+# 2. Tarik senarai Live Chats & Mesej untuk Tab Live Chat & Kawalan Bot
+@app.route("/api/chats", methods=["GET"])
+def get_chats():
+    try:
+        return jsonify({"success": True, "chats": live_chats_db}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# 3. Hantar Mesej Balasan Manual daripada Ejen Portal ke WhatsApp Pelanggan
+@app.route("/api/chats/reply", methods=["POST"])
+def reply_chat():
+    try:
+        data = request.json
+        chat_id = data.get('chat_id')
+        reply_text = data.get('text')
+        target_phone = data.get('phone') # Nombor WhatsApp penerima
+
+        # Hantar mesej sebenar melalui WhatsApp Cloud API
+        if target_phone and reply_text:
+            hantar_teks_whatsapp(target_phone, reply_text)
+
+        # Kemaskini simpanan data live_chats_db
+        for chat in live_chats_db:
+            if chat['id'] == chat_id:
+                chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
+                chat['lastMessage'] = reply_text
+                return jsonify({"success": True, "message": "Mesej berjaya dihantar ke WhatsApp!"}), 200
+                
+        return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# 4. Tukar Mod Bot (AI Bot <-> Human Touch) melalui Portal
+@app.route("/api/chats/toggle-mode", methods=["POST"])
+def toggle_mode():
+    try:
+        data = request.json
+        chat_id = data.get('chat_id')
+        
+        for chat in live_chats_db:
+            if chat['id'] == chat_id:
+                chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
+                return jsonify({"success": True, "mode": chat['mode']}), 200
+                
+        return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ==========================================
+# WHATSAPP WEBHOOK (META)
+# ==========================================
+
 @app.route("/webhook", methods=["GET"])
 def verify_whatsapp_webhook():
     verify_token_env = os.getenv("VERIFY_TOKEN", "token_rahsia_anda")
@@ -70,14 +142,13 @@ def verify_whatsapp_webhook():
             return "Verification token mismatch", 403
     return "Hello, this is WhatsApp webhook endpoint", 200
 
-# Laluan POST untuk terima mesej masuk
+
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     data = request.json
     logging.info(f"Mesej diterima: {data}")
 
     try:
-        # Ekstrak mesej masuk daripada struktur payload WhatsApp Cloud API
         entry = data.get("entry", [])
         if not entry:
             return jsonify({"status": "ignored"}), 200
@@ -95,26 +166,37 @@ def whatsapp_webhook():
         msg_obj = messages[0]
         sender_phone = msg_obj.get("from")
         
-        # Sokongan teks biasa
         message_text = ""
         if msg_obj.get("type") == "text":
             message_text = msg_obj.get("text", {}).get("body", "").strip()
 
         message_lower = message_text.lower()
 
-        # 0. KAWALAN KHAS ADMIN UNTUK TAMBAH NOTA / INGATAN BARU (#nota / #ingat)
+        # Semak sama ada nombor ini dalam mod 'human' di live chat portal
+        current_chat_mode = "ai"
+        for chat in live_chats_db:
+            if chat.get("phone") == sender_phone or chat.get("phone") == f"+{sender_phone}":
+                current_chat_mode = chat.get("mode", "ai")
+                # Kemaskini mesej masuk ke dalam live chat db untuk paparan portal
+                chat['messages'].append({"sender": "customer", "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
+                chat['lastMessage'] = message_text
+                break
+
+        # 0. KAWALAN KHAS ADMIN UNTUK NOTA (#nota / #ingat)
         admin_phone = "60132434200"
         if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
             nota_baru = message_text.replace("#nota", "").replace("#NOTA", "").replace("#ingat", "").replace("#INGAT", "").strip()
-            
-            # Simpan ke dalam fail teks ingatan admin
             with open("admin_memory.txt", "a", encoding="utf-8") as f:
                 f.write(f"- [{datetime.now().strftime('%Y-%m-%d %H:%M')}] {nota_baru}\n")
             
-            # Balas pengesahan kepada admin
             teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
+
+        # JIKA MOD ADALAH 'HUMAN', AI JANGAN BALAS AUTOMATIK (Biar ejen balas di portal)
+        if current_chat_mode == "human":
+            logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
+            return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
 
         # 1. SEMAKAN PERMINTAAN QR CODE
         if any(keyword in message_lower for keyword in KEYWORDS_QR):
@@ -125,19 +207,12 @@ def whatsapp_webhook():
                 f"Pautan ToyyibPay alternatif: {getattr(sop_payment, 'TOYYIBPAY_LINK', 'https://toyyibpay.com')}\n\n"
                 "Selepas bayaran dibuat, sila hantar resit di sini ya. Terima kasih!"
             )
-            
-            # Semak sama ada pembolehubah imej wujud dalam sop_payment, jika tidak guna string kosong/default
             qr_link = getattr(sop_payment, "QR_CODE_DIRECT_LINK", "")
-            hantar_imej_whatsapp(
-                phone=sender_phone, 
-                image_url=qr_link, 
-                caption=caption_teks
-            )
+            hantar_imej_whatsapp(phone=sender_phone, image_url=qr_link, caption=caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
-        # 2. SEMAKAN JIKA PELANGGAN HANTAR RESIT / MAKLUMAT BAYARAN SELESAI
+        # 2. SEMAKAN JIKA PELANGGAN HANTAR RESIT / BAYARAN
         if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_obj.get("type") == "image":
-            # Data contoh tempahan dikumpul daripada sesi pelanggan (boleh diubah mengikut database memori anda)
             data_tempahan_baru = {
                 "ref_id": f"SB-{sender_phone[-4:]}",
                 "nama": f"Pelanggan ({sender_phone})",
@@ -149,18 +224,13 @@ def whatsapp_webhook():
                 "status_bayaran": "Resit/Bayaran Dihantar oleh Pelanggan"
             }
 
-            # A. Hantar Emel ke sbleisuretranspot.my@gmail.com
             sop_payment.hantar_emel_admin(data_tempahan_baru)
-
-            # B. Hantar Notifikasi WhatsApp ke Nombor Admin Rasmi: 60132434200
             admin_phone_target = "60132434200"
             teks_admin = sop_payment.format_admin_notification(data_tempahan_baru)
             hantar_teks_whatsapp(admin_phone_target, teks_admin)
 
-            # Balas kepada pelanggan
-            balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan dihantar kepada pihak pengurusan (Admin) untuk disemak menggunakan rujukan nombor telefon anda. Kami akan sahkan sebentar lagi."
+            balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan dihantar kepada pihak pengurusan (Admin) untuk disemak. Kami akan sahkan sebentar lagi."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
-            
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
         # 3. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)
