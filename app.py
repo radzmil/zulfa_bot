@@ -3,30 +3,23 @@ import logging
 import requests
 from datetime import datetime
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Penting untuk benarkan LEEA Portal berhubung dengan Flask[cite: 5]
+from flask_cors import CORS
 from dotenv import load_dotenv
 
-# Muat turun pembolehubah persekitaran daripada fail .env[cite: 5]
 load_dotenv()
 
-# Import modul projek Zulfa Bot[cite: 5]
 import zulfa_brain
 import sbleisure_engine
 import sop_payment
 
-# Konfigurasi Logging[cite: 5]
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
-CORS(app)  # Aktifkan CORS supaya frontend boleh akses API Flask di Railway[cite: 4, 5]
+CORS(app)
 
-# Senarai kata kunci untuk mengesan permintaan QR Code daripada pelanggan[cite: 5]
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
-
-# Senarai kata kunci untuk mengesan penghantaran resit / bayaran selesai[cite: 5]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# Database memori sementara yang diasingkan mengikut Akaun Klien (Username Portal)
 live_chats_db = {
     "sbltransport": [
         {
@@ -35,7 +28,7 @@ live_chats_db = {
             "phone": "+60132434200",
             "lastMessage": "Salam, nak tanya kadar sewaan bas/van ke Cameron Highlands?",
             "time": "12:30 PM",
-            "mode": "ai", # Pilihan: 'ai' atau 'human'
+            "mode": "ai",
             "messages": [
                 {"sender": "customer", "text": "Salam, nak tanya kadar sewaan bas/van ke Cameron Highlands?", "time": "12:30 PM"},
                 {"sender": "ai", "text": "Waalaikumussalam! Ya boleh. Sila nyatakan tarikh dan bilangan penumpang ya.", "time": "12:31 PM"}
@@ -67,11 +60,6 @@ def index():
         "version": "2.2"
     }), 200
 
-# ==========================================
-# LALUAN API UNTUK LEEA PORTAL[cite: 5]
-# ==========================================
-
-# 1. Tarik senarai klien untuk tab Dashboard[cite: 5]
 @app.route("/api/clients", methods=["GET"])
 def get_clients_data():
     try:
@@ -88,31 +76,27 @@ def get_clients_data():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# 2. Tarik senarai Live Chats mengikut Akaun Klien (sbltransport / aluzlia)
 @app.route("/api/chats", methods=["GET"])
 def get_chats():
     try:
-        # Semak akaun klien yang dihantar dari frontend, laluan lalai adalah 'sbltransport'
         client_name = request.args.get("client", "sbltransport")
         chats = live_chats_db.get(client_name, live_chats_db.get("sbltransport", []))
         return jsonify({"success": True, "chats": chats}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# 3. Hantar Mesej Balasan Manual daripada Ejen Portal ke WhatsApp Pelanggan[cite: 5]
 @app.route("/api/chats/reply", methods=["POST"])
 def reply_chat():
     try:
         data = request.json
         chat_id = data.get('chat_id')
         reply_text = data.get('text')
-        target_phone = data.get('phone') # Nombor WhatsApp penerima[cite: 5]
+        target_phone = data.get('phone')
 
-        # Hantar mesej sebenar melalui WhatsApp Cloud API[cite: 5]
-        if target_phone and reply_text:
-            hantar_teks_whatsapp(target_phone, reply_text)
+        if target_phone:
+            clean_phone = target_phone.replace("+", "").strip()
+            hantar_teks_whatsapp(clean_phone, reply_text)
 
-        # Kemaskini simpanan data di dalam live_chats_db
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
                 if chat['id'] == chat_id:
@@ -124,7 +108,6 @@ def reply_chat():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# 4. Tukar Mod Bot (AI Bot <-> Human Touch) melalui Portal[cite: 5]
 @app.route("/api/chats/toggle-mode", methods=["POST"])
 def toggle_mode():
     try:
@@ -141,15 +124,9 @@ def toggle_mode():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-
-# ==========================================
-# WHATSAPP WEBHOOK (META)[cite: 5]
-# ==========================================
-
 @app.route("/webhook", methods=["GET"])
 def verify_whatsapp_webhook():
     verify_token_env = os.getenv("VERIFY_TOKEN", "token_rahsia_anda")
-    
     mode = request.args.get("hub.mode")
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
@@ -161,7 +138,6 @@ def verify_whatsapp_webhook():
         else:
             return "Verification token mismatch", 403
     return "Hello, this is WhatsApp webhook endpoint", 200
-
 
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
@@ -192,7 +168,6 @@ def whatsapp_webhook():
 
         message_lower = message_text.lower()
 
-        # Semak sama ada nombor ini dalam mod 'human' di live chat portal (Lalai: sbltransport)
         current_chat_mode = "ai"
         sbl_chats = live_chats_db.get("sbltransport", [])
         
@@ -202,7 +177,6 @@ def whatsapp_webhook():
                 found_chat = chat
                 break
 
-        # Jika pengguna belum wujud di database memori sbltransport, bina baharu
         if not found_chat:
             found_chat = {
                 "id": len(sbl_chats) + 100,
@@ -219,7 +193,6 @@ def whatsapp_webhook():
         found_chat['messages'].append({"sender": "customer", "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
         found_chat['lastMessage'] = message_text
 
-        # 0. KAWALAN KHAS ADMIN UNTUK NOTA (#nota / #ingat)[cite: 5]
         admin_phone = "60132434200"
         if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
             nota_baru = message_text.replace("#nota", "").replace("#NOTA", "").replace("#ingat", "").replace("#INGAT", "").strip()
@@ -230,12 +203,10 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
-        # JIKA MOD ADALAH 'HUMAN', AI JANGAN BALAS AUTOMATIK[cite: 5]
         if current_chat_mode == "human":
             logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
             return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
 
-        # 1. SEMAKAN PERMINTAAN QR CODE[cite: 5]
         if any(keyword in message_lower for keyword in KEYWORDS_QR):
             caption_teks = (
                 "Berikut adalah QR Code DuitNow CIMB rasmi **SHAHRIL BASRI LEISURE ENTERPRISE**.\n\n"
@@ -248,7 +219,6 @@ def whatsapp_webhook():
             hantar_imej_whatsapp(phone=sender_phone, image_url=qr_link, caption=caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
-        # 2. SEMAKAN JIKA PELANGGAN HANTAR RESIT / BAYARAN[cite: 5]
         if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_obj.get("type") == "image":
             data_tempahan_baru = {
                 "ref_id": f"SB-{sender_phone[-4:]}",
@@ -270,7 +240,6 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
-        # 3. PROSES BIASA MELALUI OTAK ZULFA (AI GEMINI)[cite: 5]
         if message_text:
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
@@ -281,10 +250,10 @@ def whatsapp_webhook():
         logging.error(f"Ralat pada webhook: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
 def hantar_teks_whatsapp(phone, text):
     token = os.getenv("WHATSAPP_TOKEN")
     phone_number_id = os.getenv("PHONE_NUMBER_ID", "1274341599093050")
+    clean_phone = str(phone).replace("+", "").strip()
     
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
@@ -293,18 +262,18 @@ def hantar_teks_whatsapp(phone, text):
     }
     payload = {
         "messaging_product": "whatsapp",
-        "to": phone,
+        "to": clean_phone,
         "type": "text",
         "text": {"body": text},
     }
     
     response = requests.post(url, json=payload, headers=headers)
-    logging.info(f"Respons hantar WhatsApp ke {phone}: {response.status_code} - {response.text}")
-
+    logging.info(f"Respons hantar WhatsApp ke {clean_phone}: {response.status_code} - {response.text}")
 
 def hantar_imej_whatsapp(phone, image_url, caption):
     token = os.getenv("WHATSAPP_TOKEN")
     phone_number_id = os.getenv("PHONE_NUMBER_ID", "1274341599093050")
+    clean_phone = str(phone).replace("+", "").strip()
     
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
@@ -313,7 +282,7 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     }
     payload = {
         "messaging_product": "whatsapp",
-        "to": phone,
+        "to": clean_phone,
         "type": "image",
         "image": {
             "link": image_url,
@@ -322,8 +291,7 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     }
     
     response = requests.post(url, json=payload, headers=headers)
-    logging.info(f"Respons hantar Imej QR: {response.status_code} - {response.text}")
-
+    logging.info(f"Respons hantar Imej QR ke {clean_phone}: {response.status_code} - {response.text}")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
