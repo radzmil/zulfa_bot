@@ -1,7 +1,8 @@
+flask
+flask-cors
 gunicorn
 google-genai
 google-generativeai
-flask
 requests
 python-dotenv
 pytz
