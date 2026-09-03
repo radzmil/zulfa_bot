@@ -35,6 +35,7 @@ def get_engine_rules_text():
       * KLIA ke Bentong: RM1,480
       * Ampang ke Raub: RM1,310
       * KLIA ke Raub: RM1,850
+    - CAJ MENUNGGU PEMANDU: Sekiranya pelanggan lewat/menunggu, caj sebanyak RM150 dikenakan untuk setiap jam pengantara[cite: 10].
     - DESTINASI DALAM PULAU (PULAU PINANG): Tambahan surcaj RM200 bagi destinasi dalam pulau (seperti Georgetown, Batu Ferringhi, Bayan Lepas, dll) untuk caj tol jambatan dan logistik pulau[cite: 1, 2].
     - STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup di Selangor, KL, Putrajaya/Cyberjaya/KLIA. Di luar kawasan, tolak dan beri link: https://wa.link/nrmesv[cite: 1, 2].
     - NO URGENT BOOKINGS: Tempahan online HANYA untuk tarikh 8 HARI DAN KE ATAS. Jika 7 hari ke bawah, tolak dan beri link: https://wa.link/nrmesv[cite: 1, 2].
@@ -433,4 +434,4 @@ def semak_tarikh_booking(tarikh_str):
 
 def dapatkan_harga_automatik(pickup, destinasi, jenis_trip="one_way", return_hari_sama=True, tier_jalan="normal"):
     """Fungsi pembantu utama untuk mendapatkan harga automatik One-Way atau Two-Way"""
-    return kira_harga_trip(lokasi_pickup, destinasi, jenis_jenis_trip=jenis_trip, return_hari_sama=return_hari_sama, jarak_km=None, tier_jalan=tier_jalan)
+    return kira_harga_trip(lokasi_pickup, destinasi, jenis_trip=jenis_trip, return_hari_sama=return_hari_sama, jarak_km=None, tier_jalan=tier_jalan)
