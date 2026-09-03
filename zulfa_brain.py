@@ -286,7 +286,7 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     try:
         # 4. Panggil model Gemini
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-3.5-flash-lite",
             contents=contents,
             config=config
         )
