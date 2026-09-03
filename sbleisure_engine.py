@@ -134,8 +134,8 @@ def dapatkan_harga_asas_destinasi(destinasi):
     if any(z in dest for z in zon_pahang_1500):
         return 1500.00
 
-    # 5. ZON KUANTAN, PEKAN, ROMPIN, CAMERON HIGHLANDS, BERA (PAHANG) & KELANTAN & TERENGGANU - RM1600 / RM1800
-    zon_rm1800 = [
+    # 5. ZON KUANTAN, PEKAN, ROMPIN, CAMERON HIGHLANDS, BERA (PAHANG) & KELANTAN & TERENGGANU - RM1600
+    zon_rm1600 = [
         "kelantan", "terengganu",
         "kota bharu", "pasir mas", "tumpat", "bachok", "pasir puteh", "machang", "tanah merah", "kuala krai", "gua musang", "jeli",
         "kuala terengganu", "kuala nerus", "kemaman", "dungun", "besut", "setiu", "marang", "hulu terengganu",
@@ -156,12 +156,7 @@ def dapatkan_harga_asas_destinasi(destinasi):
         "keruak", "kuala besut", "lubuk kertah", "pasir akar", "pelagat", "pangkalan nyireh", "tembila", "tenang",
         "chalok", "guntong", "hulu nerus", "merang", "pak kancil", "caluk",
         "alor limbat", "bukit payong", "jerong", "merchang", "rusila", "pulau kerengga",
-        "hulu berang", "jenagor", "kenerong", "kuala telemong", "tersat", "telemong"
-    ]
-    if any(z in dest for z in zon_rm1800):
-        return 1800.00
-
-    zon_pahang_1600 = [
+        "hulu berang", "jenagor", "kenerong", "kuala telemong", "tersat", "telemong",
         "kuantan", "pekan", "rompin", "cameron highlands", "bera",
         "beserah", "kuala kuantan", "penor", "ulu kuantan", "sungai karang",
         "bebar", "langgar", "lepar", "penyor", "pulau manis", "pulau rusa", "temai",
@@ -169,7 +164,7 @@ def dapatkan_harga_asas_destinasi(destinasi):
         "ringlet", "tanah rata", "ulu telom",
         "kemayan"
     ]
-    if any(z in dest for z in zon_pahang_1600):
+    if any(z in dest for z in zon_rm1600):
         return 1600.00
 
     # 6. ZON MELAKA & NEGERI SEMBILAN (RM1200)
@@ -361,7 +356,7 @@ def kira_harga_bas(lokasi_pickup, destinasi, jarak_km=None, tier_jalan="normal")
     """
     Mengira harga One-Way:
     1. Semak jadual harga tetap laluan dahulu.
-    2. Jika tiada, gunakan harga asas zon destinasi (50 km pertama) + lebihan jarak (51 km ke atas) pada kadar RM3.50/km.
+    2. Jika tiada, gunakan harga asas zon destinasi (50 km pertama) + lebihan jarak (51 km ke atas) pada kadar RM3.60/km.
     3. Tambah surcaj khas RM200 jika destinasi masuk ke bahagian dalam pulau (Pulau Pinang)[cite: 1, 2].
     """
     pickup = str(lokasi_pickup).strip().lower()
@@ -380,8 +375,8 @@ def kira_harga_bas(lokasi_pickup, destinasi, jarak_km=None, tier_jalan="normal")
             jarak_dikesan = dapatkan_jarak_km(pickup, dest)
             jarak_km = jarak_dikesan if jarak_dikesan else 80.0
             
-        # 4. Kadar Lebihan KM diseragamkan kepada RM3.50 untuk semua kawasan
-        kadar_km = 3.50
+        # 4. Kadar Lebihan KM diseragamkan kepada RM3.60 untuk semua kawasan
+        kadar_km = 3.60
             
         caj_jarak = (jarak_km - 50) * kadar_km if jarak_km > 50 else 0
         jumlah_harga = harga_asas + caj_jarak
@@ -438,4 +433,4 @@ def semak_tarikh_booking(tarikh_str):
 
 def dapatkan_harga_automatik(pickup, destinasi, jenis_trip="one_way", return_hari_sama=True, tier_jalan="normal"):
     """Fungsi pembantu utama untuk mendapatkan harga automatik One-Way atau Two-Way"""
-    return kira_harga_trip(lokasi_pickup, destinasi, jenis_trip=jenis_trip, return_hari_sama=return_hari_sama, jarak_km=None, tier_jalan=tier_jalan)
+    return kira_harga_trip(lokasi_pickup, destinasi, jenis_jenis_trip=jenis_trip, return_hari_sama=return_hari_sama, jarak_km=None, tier_jalan=tier_jalan)
