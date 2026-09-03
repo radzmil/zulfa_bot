@@ -117,7 +117,7 @@ def dapatkan_harga_asas_destinasi(destinasi):
         return 1200.00
 
     # 3. ZON RAUB & LIPIS (PAHANG) - RM1300
-    zon_pahang_1300 = [
+    zon_pahang_1500 = [
         "raub", "batu talam", "dong", "gali", "sega",
         "lipis", "batu yon", "cheka", "gua", "jelai", "kechau", "tanum"
     ]
