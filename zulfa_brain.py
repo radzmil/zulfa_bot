@@ -1,3 +1,7 @@
+# ==========================================
+# FAIL: zulfa_brain.py (DIKEMASKINI)
+# MODUL UTAMA OTAK AI ZULFA (GEMINI)
+# ==========================================
 import os
 import json
 import logging
@@ -69,12 +73,11 @@ def kemaskini_konteks_pelanggan(no_telefon, mesej_user, mesej_zulfa, nama=None):
     if nama:
         memori[no_telefon]["nama"] = nama
 
-    # Simpan perbualan (Hadkan 10 perbualan terakhir untuk jimatkan token)
     sejarah = memori[no_telefon]["sejarah_mesej"]
     sejarah.append({"role": "user", "content": mesej_user, "timestamp": datetime.now().isoformat()})
     sejarah.append({"role": "assistant", "content": mesej_zulfa, "timestamp": datetime.now().isoformat()})
     
-    if len(sejarah) > 20:  # 10 pasang perbualan
+    if len(sejarah) > 20:  
         sejarah = sejarah[-20:]
         
     memori[no_telefon]["sejarah_mesej"] = sejarah
@@ -94,13 +97,11 @@ def bina_system_instruction():
     engine_rules = sbleisure_engine.get_engine_rules_text() if hasattr(sbleisure_engine, 'get_engine_rules_text') else ""
     persona_text = get_zulfa_persona()
 
-    # Baca nota tambahan daripada admin jika ada
     admin_notes = ""
     if os.path.exists("admin_memory.txt"):
         with open("admin_memory.txt", "r", encoding="utf-8") as f:
             admin_notes = f.read()
 
-    # SEMAKAN MASA REAL-TIME MALAYSIA
     try:
         import pytz
         tz_malaysia = pytz.timezone('Asia/Kuala_Lumpur')
@@ -113,7 +114,6 @@ def bina_system_instruction():
     angka_hari = sekarang.weekday() 
     jam_angka = sekarang.hour
 
-    # Tentukan status waktu pejabat (Isnin-Jumaat, 8 pagi - 5 petang)
     is_waktu_pejabat = True
     if angka_hari >= 5: 
         is_waktu_pejabat = False
@@ -159,18 +159,18 @@ def bina_system_instruction():
     14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang).
     15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip.
     16. Sentiasa pastikan respons PENDEK, padat, dan mesra WhatsApp.
-    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin).
+    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas.
     18. Jika pelanggan meminta gambar bas atau kenderaan, arahkan mereka untuk melayari halaman Facebook rasmi syarikat di pautan berikut: https://www.facebook.com/sewabaspersiaranmurah    
-    19. STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup di Selangor, KL, Putrajaya,Cyberjaya,KLIA,klia, pickup Di luar kawasan pickup, tolak dan beri link: https://wa.link/nrmesv.    
-    20. Hanya sewa bas DIBENARKAN untuk tempahan online, Van,mpv dan suv TIDAK DIBENARKAN untuk tempahan online terus beri link wahatsapp sales.
+    19. STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup di Selangor, KL, Putrajaya, Cyberjaya, KLIA. Di luar kawasan pickup, tolak dan beri link: https://wa.link/nrmesv.    
+    20. Hanya sewa bas DIBENARKAN untuk tempahan online, Van, mpv dan suv TIDAK DIBENARKAN untuk tempahan online terus beri link whatsapp sales.
     21. WAJIB isi borang dulu SEBELUM bagi harga dan wajib isi semua detail untuk one way atau two way.
     22. Harga sewaan boleh rujuk {engine_rules}.
-    23. Memberi perkhidmatan yang terbaik dan menjadi pekrja yang terbaik dan sentiasa menitik beratkan panduan dan sop yang diberikan.
+    23. Memberi perkhidmatan yang terbaik dan sentiasa menitik beratkan panduan dan sop yang diberikan.
     24. Bijak Mengawal keadaan untuk membuat pelanggan selesa dan belajar dari semasa ke semasa.
     25. **PENGIRAAN HARGA & JADUAL TETAP (WAJIB IKUT SBLEISURE_ENGINE):** Sentiasa semak jadual harga tetap (JADUAL_HARGA_BAS_TETAP). Contohnya, KLIA ke Raub adalah tepat **RM1,850**. JANGAN sebarangan meneka harga sendiri.
-    26. JANGAN pandai-pandai buat harga sendiri, ikot pada sbleisure.engine dan sop.
+    26. JANGAN pandai-pandai buat harga sendiri, ikut pada sbleisure.engine dan sop.
     27. Jawab soalan dengan tenang dan berhemah seperti manusia sebenar.
-    28. JANGAN ubah harga sesuka hati, RUJUK {engine_rules}
+    28. JANGAN ubah harga sesuka hati, RUJUK {engine_rules}.
     29. KAMU adalah ZULFA bukan AI ROBOT.
     30. JAWAB soalan pendek dan ringkas, JANGAN bagi jawapan panjang-panjang.
     31. Closed booking dengan pantas, jangan terlalu melalut-lalut.
@@ -180,7 +180,7 @@ def bina_system_instruction():
 
     === BORANG ONE WAY ===
     Terima kasih kerana berminat dengan perkhidmatan sewaan Mpv/Van/Bas persiaran   
-    *SB Leisure *🚎
+    *SB Leisure* 🚎
 
     ➡️Mohon Tuan/Puan isi :
 
@@ -201,12 +201,12 @@ def bina_system_instruction():
 
     📌HARGA SEWAAN TERTAKLUK KEPADA JARAK DAN MASA PERJALANAN YANG DIBERIKAN📍
 
-    T.KASIH😊
+    T.KASIH 😊
 
     === BORANG TWO WAY ===
 
     Terima kasih kerana berminat dengan perkhidmatan sewaan Mpv/Van/Bas persiaran
-    🚎*SB Leisure *🚎
+    🚎 *SB Leisure* 🚎
 
     ➡️Mohon Tuan/Puan isi :
 
@@ -235,102 +235,9 @@ def bina_system_instruction():
 
     📌HARGA SEWAAN TERTAKLUK KEPADA JARAK DAN MASA PERJALANAN YANG DIBERIKAN📍
 
-    T.KASIH😊
+    T.KASIH 😊
     """
     return system_prompt
-
-DESTINASI_SEMENANJUNG = {
-    "johor": [
-        "Legoland Malaysia, Iskandar Puteri",
-        "Desaru Coast & Pantai Desaru",
-        "Taman Negara Johor Endau-Rompin",
-        "Bandar Raya Johor Bahru (Jalan Wong Ah Fook / Danga Bay)"
-    ],
-    "kedah": [
-        "Pulau Langkawi (Melalui Jetty Kuah/Kuala Kedah)",
-        "Gunung Keriang",
-        "Puncak Yan (Jerai Geopark)",
-        "Pekan Rabu Alor Setar"
-    ],
-    "kelantan": [
-        "Pasar Siti Khadijah, Kota Bharu",
-        "Pantai Irama, Bachok",
-        "Jambatan Sultan Yahya Petra",
-        "Rantau Panjang (Beli-belah Bebas Cukai)"
-    ],
-    "melaka": [
-        "Jonker Walk & Bandar Hilir",
-        "Kota A Famosa & Menara Taming Sari",
-        "Masjid Selat Melaka",
-        "Ayer Keroh (Zoo Melaka / Taman Rama-rama)"
-    ],
-    "negeri sembilan": [
-        "Pantai Teluk Kemang, Port Dickson",
-        "Muzium Diraja Seri Menanti, Kuala Pilah",
-        "Hutan Lipur Ulu Bendul, Seremban",
-        "Pusat Falc Baitul Hilal, Teluk Kemang"
-    ],
-    "pahang": [
-        "Genting Highlands",
-        "Cameron Highlands",
-        "Taman Negara Pahang",
-        "Teluk Cempedak & Pantai Chendor, Kuantan"
-    ],
-    "perak": [
-        "Lost World of Tambun, Ipoh",
-        "Gua Tempurung, Gopeng",
-        "Pulau Pangkor (Jeti Lumut)",
-        "Kellie's Castle, Batu Gajah"
-    ],
-    "perlis": [
-        "Gua Kelam, Kaki Bukit",
-        "Wang Kelian (Viewpoint Negeri Di Bawah Bayu)",
-        "Kota Kayang Museum",
-        "Taman Herba Perlis"
-    ],
-    "pulau pinang": [
-        "Georgetown (UNESCO Heritage Sites)",
-        "Bukit Bendera (Penang Hill)",
-        "Taman Tema Escape & Entopia, Teluk Bahang",
-        "Padang Kota Lama (Gurney Bay)"
-    ],
-    "selangor": [
-        "i-City Shah Alam",
-        "Bukit Melawati & Kelip-kelip Kuala Selangor",
-        "FRIM Kepong (Taman Botani)",
-        "Sky Mirror Kuala Selangor"
-    ],
-    "terengganu": [
-        "Pulau Redang / Pulau Perhentian (Jeti Merang/Besut)",
-        "Pasar Besar Kedai Payang, Kuala Terengganu",
-        "Kampung Cina Terengganu",
-        "Tasik Kenyir, Hulu Terengganu"
-    ],
-    "kuala lumpur": [
-        "Menara Berkembar Petronas (KLCC) & KL Tower",
-        "Bukit Bintang & Lalaport",
-        "Merdeka 118 & Dataran Merdeka",
-        "Taman Tasik Titiwangsa"
-    ],
-    "putrajaya": [
-        "Masjid Putra & Mercu Tanda Putrajaya",
-        "Tasik Putrajaya (Cruise Tasik Putrajaya)",
-        "Taman Botani Putrajaya",
-        "Kompleks Perbadanan Putrajaya"
-    ]
-}
-
-def cari_tempat_menarik(negeri_atau_lokasi):
-    """Fungsi carian destinasi mengikut negeri di Semenanjung Malaysia"""
-    query = negeri_atau_lokasi.lower()
-    for negeri, senarai in DESTINASI_SEMENANJUNG.items():
-        if negeri in query:
-            return negeri.title(), senarai
-    return None, []
-
-def senaraikan_semua_negeri():
-    """Mengembalikan senarai nama negeri yang tersedia"""
-    return list(DESTINASI_SEMENANJUNG.keys())
 
 def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     """Menerima mesej daripada pelanggan dan memulangkan respons Zulfa menggunakan Gemini."""
@@ -363,7 +270,6 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
             parts=[types.Part.from_text(text=h["content"])]
         ))
     
-    # Tambah mesej terkini daripada pengguna
     contents.append(types.Content(
         role="user",
         parts=[types.Part.from_text(text=mesej_user)]
