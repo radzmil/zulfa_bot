@@ -109,7 +109,71 @@ def dapatkan_harga_asas_destinasi(destinasi):
     if any(z in dest for z in zon_selangor_kl):
         return 700.00
 
-    # 2. ZON MELAKA & NEGERI SEMBILAN (RM1200)
+    # 2. ZON BENTONG (PAHANG) - RM1200
+    zon_pahang_1200 = [
+        "bentong", "pelangai", "sabai", "janda baik"
+    ]
+    if any(z in dest for z in zon_pahang_1200):
+        return 1200.00
+
+    # 3. ZON RAUB (PAHANG) - RM1300
+    zon_pahang_1300 = [
+        "raub", "batu talam", "dong", "gali", "sega"
+    ]
+    if any(z in dest for z in zon_pahang_1300):
+        return 1300.00
+
+    # 4. ZON TEMERLOH, MARAN, JERANTUT, LIPIS (PAHANG) - RM1500
+    zon_pahang_1500 = [
+        "temerloh", "maran", "jerantut", "lipis",
+        "bangau", "guai", "kerdau", "lebak", "mentakab", "pahang tua", "sanggang", "semantan", "songsang",
+        "chenor", "kertau",
+        "burau", "hulu cheka", "hulu temebling", "temebling", "kangkong", "kelola", "pedah", "pulau tawar",
+        "batu yon", "cheka", "gua", "jelai", "kechau", "tanum"
+    ]
+    if any(z in dest for z in zon_pahang_1500):
+        return 1500.00
+
+    # 5. ZON KUANTAN, PEKAN, ROMPIN, CAMERON HIGHLANDS, BERA (PAHANG) & KELANTAN & TERENGGANU - RM1600 / RM1800
+    # Mengikut spesifikasi terkini: Kelantan (RM1800), Terengganu (RM1800)
+    zon_rm1800 = [
+        "kelantan", "terengganu",
+        "kota bharu", "pasir mas", "tumpat", "bachok", "pasir puteh", "machang", "tanah merah", "kuala krai", "gua musang", "jeli",
+        "kuala terengganu", "kuala nerus", "kemaman", "dungun", "besut", "setiu", "marang", "hulu terengganu",
+        "baung", "badang", "banggu", "lundang", "panji", "kemumin", "kubang kerian", "peringat", "salor", "sering", "kadok", "kota", "limbat", "pendek",
+        "lubok jong", "rantau panjang", "chetok", "bunut susu", "apam", "tok uban", "repek",
+        "geting", "jal besar", "morak", "pasir pekan", "pengkalan kubor", "tawang",
+        "gunong", "jelawat", "tangok", "melawi",
+        "bukit abal", "jeram", "limbongan", "padang pak amat", "semerak", "jeram perdah",
+        "ulu sat", "labok", "pulai chondong", "temangan",
+        "kusial", "jedok", "ulu kusial", "bukit panau",
+        "dabong", "olak jerai", "mengkebang", "guchil",
+        "galas", "bertam", "pulai", "chiku",
+        "kuala balah", "air lanas",
+        "atas tol", "batu buruk", "cabang tiga", "cendering", "gelugor kedai payang", "kepong", "losong", "manir", "paloh", "pulau duyong", "pulau rusa", "rengas", "serada",
+        "batu rakit", "bukit tunggal", "gong badak", "pulau redang", "seberang takir",
+        "cukai", "kijal", "pasir semut", "tebak", "teluk kalong", "binjai", "banggol", "cherating", "air puteh",
+        "abang", "besul", "jerangau", "kuala dungun", "paka", "pasir raja", "sura", "ullu paka",
+        "keruak", "kuala besut", "lubuk kertah", "pasir akar", "pelagat", "pangkalan nyireh", "tembila", "tenang",
+        "chalok", "guntong", "hulu nerus", "merang", "pak kancil", "caluk",
+        "alor limbat", "bukit payong", "jerong", "merchang", "rusila", "pulau kerengga",
+        "hulu berang", "jenagor", "kenerong", "kuala telemong", "tersat", "telemong"
+    ]
+    if any(z in dest for z in zon_rm1800):
+        return 1800.00
+
+    zon_pahang_1600 = [
+        "kuantan", "pekan", "rompin", "cameron highlands", "bera",
+        "beserah", "kuala kuantan", "penor", "ulu kuantan", "sungai karang",
+        "bebar", "langgar", "lepar", "penyor", "pulau manis", "pulau rusa", "temai",
+        "endau", "keratong", "tioman",
+        "ringlet", "tanah rata", "ulu telom",
+        "kemayan"
+    ]
+    if any(z in dest for z in zon_pahang_1600):
+        return 1600.00
+
+    # 6. ZON MELAKA & NEGERI SEMBILAN (RM1200)
     zon_melaka_ns = [
         "melaka tengah", "alor gajah", "jasin", "seremban", "port dickson", "rembau", 
         "kuala pilah", "jelebu", "jempol", "tampin",
@@ -138,7 +202,7 @@ def dapatkan_harga_asas_destinasi(destinasi):
     if any(z in dest for z in zon_melaka_ns):
         return 1200.00
 
-    # 3. ZON PERAK (RM1200)
+    # 7. ZON PERAK (RM1200)
     zon_perak = [
         "kinta", "larut", "matang", "selama", "manjung", "batang padang", "hilir perak", 
         "kerian", "hulu perak", "kuala kangsar", "bagan datuk", "muallim", "kampar",
@@ -156,17 +220,17 @@ def dapatkan_harga_asas_destinasi(destinasi):
     if any(z in dest for z in zon_perak):
         return 1200.00
 
-    # 4. ZON LUAR PULAU (PULAU PINANG - SEBERANG PERAI UTARA, TENGAH, SELATAN): RM1300
+    # 8. ZON LUAR PULAU (PULAU PINANG - SEBERANG PERAI UTARA, TENGAH, SELATAN): RM1300
     zon_pp_luar = ["seberang perai", "butterworth", "kepala batas", "tasek gelugor", "bukit mertajam", "perai", "seberang jaya", "nibong tebal", "sungai bakap", "batu kawan"]
     if any(z in dest for z in zon_pp_luar):
         return 1300.00
 
-    # 5. ZON DALAM PULAU (PULAU PINANG - TIMUR LAUT, BARAT DAYA): RM1400
+    # 9. ZON DALAM PULAU (PULAU PINANG - TIMUR LAUT, BARAT DAYA): RM1400
     zon_pp_dalam = ["timur laut", "barat daya", "georgetown", "george town", "batu ferringhi", "bayan lepas", "balik pulau", "batu maung", "jelutong", "ayer itam"]
     if any(z in dest for z in zon_pp_dalam):
         return 1400.00
 
-    # 6. ZON JOHOR, PERLIS & KEDAH: RM1500
+    # 10. ZON JOHOR, PERLIS & KEDAH: RM1500
     zon_johor_perlis_kedah = [
         "johor", "perlis", "kedah", "johor bahru", "muar", "batu pahat", "kluang", "kulai", 
         "pontian", "segamat", "kota tinggi", "mersing", "tangkak", "arau", "abi", "chuping", 
@@ -271,7 +335,7 @@ def tentukan_zon_wilayah(destinasi):
     
     zon_utara = ["rawang", "bukit beruntung", "kalumpang", "tanjung malim", "tapah", "ipoh", "taiping", "teluk intan", "parit buntar", "gerik", "kuala kangsar", "sungai buloh", "serendah", "batang kali", "rasa", "hulu bernam", "butterworth", "georgetown", "george town", "batu ferringhi", "bayan lepas", "pulau pinang", "penang", "alor setar", "kangar"]
     zon_selatan = ["kajang", "semenyih", "seremban", "port dickson", "nilai", "sepang", "dengkil", "bangi", "mantin", "rembau", "tampin", "melaka", "muar", "batu pahat", "johor bahru", "kuala klawang", "klawang"]
-    zon_timur = ["janda baik", "bukit tinggi", "genting", "bentong", "raub", "temerloh", "kuantan", "cameron highlands", "kuala lipis"]
+    zon_timur = ["janda baik", "bukit tinggi", "genting", "bentong", "raub", "temerloh", "kuantan", "cameron highlands", "kuala lipis", "kelantan", "terengganu", "pahang"]
     
     if any(k in dest for k in zon_utara):
         return "utara"
