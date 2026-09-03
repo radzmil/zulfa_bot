@@ -35,16 +35,16 @@ def get_engine_rules_text():
       * KLIA ke Bentong: RM1,480
       * Ampang ke Raub: RM1,310
       * KLIA ke Raub: RM1,850
-    - DESTINASI DALAM PULAU (PULAU PINANG): Tambahan surcaj RM200 bagi destinasi dalam pulau (seperti Georgetown, Batu Ferringhi, Bayan Lepas, dll) untuk caj tol jambatan dan logistik pulau.
-    - STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup di Selangor, KL, Putrajaya/Cyberjaya/KLIA. Di luar kawasan, tolak dan beri link: https://wa.link/nrmesv.
-    - NO URGENT BOOKINGS: Tempahan online HANYA untuk tarikh 8 HARI DAN KE ATAS. Jika 7 hari ke bawah, tolak dan beri link: https://wa.link/nrmesv.
+    - DESTINASI DALAM PULAU (PULAU PINANG): Tambahan surcaj RM200 bagi destinasi dalam pulau (seperti Georgetown, Batu Ferringhi, Bayan Lepas, dll) untuk caj tol jambatan dan logistik pulau[cite: 1, 2].
+    - STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup di Selangor, KL, Putrajaya/Cyberjaya/KLIA. Di luar kawasan, tolak dan beri link: https://wa.link/nrmesv[cite: 1, 2].
+    - NO URGENT BOOKINGS: Tempahan online HANYA untuk tarikh 8 HARI DAN KE ATAS. Jika 7 hari ke bawah, tolak dan beri link: https://wa.link/nrmesv[cite: 1, 2].
     - FORMULA TWO-WAY:
-      * Return pada HARI YANG SAMA: Tambah 50% dari harga One-Way (x1.5).
-      * Return pada HARI BERBEZA (Bermalam): Tambah 100% dari harga One-Way (x2.0).
-    - PEMBAYARAN: Deposit 50% wajib ke akaun CIMB (SHAHRIL BASRI LEISURE ENTERPRISE) untuk lock tarikh.
-    - LARANGAN KERAS: JANGAN SEKALI-KALI sebut harga asas, formula, kadar per km, atau pecahan kos kepada pelanggan.
-    - FORMAT JAWAPAN HARGA: Terus sebut laluan (pickup ke drop-off) dan harga akhir sahaja dengan ringkas (Contoh: "Untuk sewaan dari Ampang ke Tanjung Malim, anggaran harga adalah RM1,010").
-    - WAJIB isi borang dulu SEBELUM bagi harga dan wajib isi semua detail untuk one way atau two way.
+      * Return pada HARI YANG SAMA: Tambah 50% dari harga One-Way (x1.5)[cite: 1, 2].
+      * Return pada HARI BERBEZA (Bermalam): Tambah 100% dari harga One-Way (x2.0)[cite: 1, 2].
+    - PEMBAYARAN: Deposit 50% wajib ke akaun CIMB (SHAHRIL BASRI LEISURE ENTERPRISE) untuk lock tarikh[cite: 1, 2].
+    - LARANGAN KERAS: JANGAN SEKALI-KALI sebut harga asas, formula, kadar per km, atau pecahan kos kepada pelanggan[cite: 1, 2].
+    - FORMAT JAWAPAN HARGA: Terus sebut laluan (pickup ke drop-off) dan harga akhir sahaja dengan ringkas (Contoh: "Untuk sewaan dari Ampang ke Tanjung Malim, anggaran harga adalah RM1,010")[cite: 1, 2].
+    - WAJIB isi borang dulu SEBELUM bagi harga dan wajib isi semua detail untuk one way atau two way[cite: 1, 2].
     """
 
 def get_zulfa_persona():
@@ -116,20 +116,20 @@ def dapatkan_harga_asas_destinasi(destinasi):
     if any(z in dest for z in zon_pahang_1200):
         return 1200.00
 
-    # 3. ZON RAUB & LIPIS (PAHANG) - RM1300
-    zon_pahang_1500 = [
-        "raub", "batu talam", "dong", "gali", "sega",
-        "lipis", "batu yon", "cheka", "gua", "jelai", "kechau", "tanum"
+    # 3. ZON RAUB (PAHANG) - RM1300
+    zon_pahang_1300 = [
+        "raub", "batu talam", "dong", "gali", "sega"
     ]
     if any(z in dest for z in zon_pahang_1300):
         return 1300.00
 
-    # 4. ZON TEMERLOH, MARAN, JERANTUT (PAHANG) - RM1500
+    # 4. ZON TEMERLOH, MARAN, JERANTUT, LIPIS (PAHANG) - RM1500
     zon_pahang_1500 = [
-        "temerloh", "maran", "jerantut",
+        "temerloh", "maran", "jerantut", "lipis",
         "bangau", "guai", "kerdau", "lebak", "mentakab", "pahang tua", "sanggang", "semantan", "songsang",
         "chenor", "kertau",
-        "burau", "hulu cheka", "hulu temebling", "temebling", "kangkong", "kelola", "pedah", "pulau tawar"
+        "burau", "hulu cheka", "hulu temebling", "temebling", "kangkong", "kelola", "pedah", "pulau tawar",
+        "batu yon", "cheka", "gua", "jelai", "kechau", "tanum"
     ]
     if any(z in dest for z in zon_pahang_1500):
         return 1500.00
@@ -317,7 +317,7 @@ def semak_jadual_tetap(pickup, dest):
 def semak_kawasan_dalam_pulau_pinang(destinasi):
     """
     Mengesan sama ada destinasi berada di bahagian dalam pulau (Pulau Pinang)
-    untuk caj tambahan tol jambatan / kesesakan bandar & logistik pulau (+RM200).
+    untuk caj tambahan tol jambatan / kesesakan bandar & logistik pulau (+RM200)[cite: 1, 2].
     """
     dest = str(destinasi).strip().lower()
     kawasan_pulau = [
@@ -327,23 +327,6 @@ def semak_kawasan_dalam_pulau_pinang(destinasi):
         "pulau pinang (pulau)", "penang island"
     ]
     return any(k in dest for k in kawasan_pulau)
-
-def tentukan_zon_wilayah(destinasi):
-    """Menentukan kadar caj per km melebihi 50 km mengikut zon wilayah destinasi"""
-    dest = str(destinasi).lower()
-    
-    zon_utara = ["rawang", "bukit beruntung", "kalumpang", "tanjung malim", "tapah", "ipoh", "taiping", "teluk intan", "parit buntar", "gerik", "kuala kangsar", "sungai buloh", "serendah", "batang kali", "rasa", "hulu bernam", "butterworth", "georgetown", "george town", "batu ferringhi", "bayan lepas", "pulau pinang", "penang", "alor setar", "kangar"]
-    zon_selatan = ["kajang", "semenyih", "seremban", "port dickson", "nilai", "sepang", "dengkil", "bangi", "mantin", "rembau", "tampin", "melaka", "muar", "batu pahat", "johor bahru", "kuala klawang", "klawang"]
-    zon_timur = ["janda baik", "bukit tinggi", "genting", "bentong", "raub", "temerloh", "kuantan", "cameron highlands", "kuala lipis", "kelantan", "terengganu", "pahang"]
-    
-    if any(k in dest for k in zon_utara):
-        return "utara"
-    elif any(k in dest for k in zon_selatan):
-        return "selatan"
-    elif any(k in dest for k in zon_timur):
-        return "timur"
-    else:
-        return "standard"
 
 def dapatkan_jarak_km(lokasi_asal, lokasi_tuju):
     """Mendapatkan jarak pemanduan sebenar (km) menggunakan OpenStreetMap / OSRM"""
@@ -378,8 +361,8 @@ def kira_harga_bas(lokasi_pickup, destinasi, jarak_km=None, tier_jalan="normal")
     """
     Mengira harga One-Way:
     1. Semak jadual harga tetap laluan dahulu.
-    2. Jika tiada, gunakan harga asas zon destinasi (50 km pertama) + lebihan jarak (51 km ke atas).
-    3. Tambah surcaj khas RM200 jika destinasi masuk ke bahagian dalam pulau (Pulau Pinang).
+    2. Jika tiada, gunakan harga asas zon destinasi (50 km pertama) + lebihan jarak (51 km ke atas) pada kadar RM3.50/km.
+    3. Tambah surcaj khas RM200 jika destinasi masuk ke bahagian dalam pulau (Pulau Pinang)[cite: 1, 2].
     """
     pickup = str(lokasi_pickup).strip().lower()
     dest = str(destinasi).strip().lower()
@@ -397,21 +380,13 @@ def kira_harga_bas(lokasi_pickup, destinasi, jarak_km=None, tier_jalan="normal")
             jarak_dikesan = dapatkan_jarak_km(pickup, dest)
             jarak_km = jarak_dikesan if jarak_dikesan else 80.0
             
-        # 4. Tentukan Kadar Lebihan KM Mengikut Zon Wilayah (51 km ke atas)
-        zon = tentukan_zon_wilayah(dest)
-        if zon == "utara":
-            kadar_km = 3.50
-        elif zon == "selatan":
-            kadar_km = 4.00
-        elif zon == "timur":
-            kadar_km = 6.50
-        else:
-            kadar_km = 3.50
+        # 4. Kadar Lebihan KM diseragamkan kepada RM3.50 untuk semua kawasan
+        kadar_km = 3.50
             
         caj_jarak = (jarak_km - 50) * kadar_km if jarak_km > 50 else 0
         jumlah_harga = harga_asas + caj_jarak
 
-    # 5. Surcaj Khas Bahagian Dalam Pulau (Pulau Pinang) +RM200
+    # 5. Surcaj Khas Bahagian Dalam Pulau (Pulau Pinang) +RM200[cite: 1, 2]
     if semak_kawasan_dalam_pulau_pinang(dest):
         jumlah_harga += 200.00
     
@@ -424,9 +399,9 @@ def kira_harga_bas(lokasi_pickup, destinasi, jarak_km=None, tier_jalan="normal")
 def kira_harga_trip(lokasi_pickup, destinasi, jenis_trip="one_way", return_hari_sama=True, jarak_km=None, tier_jalan="normal"):
     """
     Mengira harga trip penuh mengikut jenis sewaan:
-    - One-Way: 100% harga sehala
-    - Two-Way Return Hari Sama: +50% (x1.5)
-    - Two-Way Return Hari Berbeza (Bermalam): +100% (x2.0)
+    - One-Way: 100% harga sehala[cite: 1, 2]
+    - Two-Way Return Hari Sama: +50% (x1.5)[cite: 1, 2]
+    - Two-Way Return Hari Berbeza (Bermalam): +100% (x2.0)[cite: 1, 2]
     """
     harga_one_way = kira_harga_bas(lokasi_pickup, destinasi, jarak_km=jarak_km, tier_jalan=tier_jalan)
     
@@ -441,7 +416,7 @@ def kira_harga_trip(lokasi_pickup, destinasi, jenis_trip="one_way", return_hari_
     return float(harga_one_way)
 
 def semak_tarikh_booking(tarikh_str):
-    """Menyemak sama ada tarikh tempahan melepasi sekatan tempahan tergesa-gesa (>= 8 hari)"""
+    """Menyemak sama ada tarikh tempahan melepasi sekatan tempahan tergesa-gesa (>= 8 hari)[cite: 1, 2]"""
     try:
         tarikh_bersih = tarikh_str.strip()
         if '-' in tarikh_bersih and len(tarikh_bersih.split('-')[0]) == 4:
