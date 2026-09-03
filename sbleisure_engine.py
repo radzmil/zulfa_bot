@@ -116,26 +116,25 @@ def dapatkan_harga_asas_destinasi(destinasi):
     if any(z in dest for z in zon_pahang_1200):
         return 1200.00
 
-    # 3. ZON RAUB (PAHANG) - RM1300
+    # 3. ZON RAUB & LIPIS (PAHANG) - RM1300
     zon_pahang_1300 = [
-        "raub", "batu talam", "dong", "gali", "sega"
+        "raub", "batu talam", "dong", "gali", "sega",
+        "lipis", "batu yon", "cheka", "gua", "jelai", "kechau", "tanum"
     ]
     if any(z in dest for z in zon_pahang_1300):
         return 1300.00
 
-    # 4. ZON TEMERLOH, MARAN, JERANTUT, LIPIS (PAHANG) - RM1500
+    # 4. ZON TEMERLOH, MARAN, JERANTUT (PAHANG) - RM1500
     zon_pahang_1500 = [
-        "temerloh", "maran", "jerantut", "lipis",
+        "temerloh", "maran", "jerantut",
         "bangau", "guai", "kerdau", "lebak", "mentakab", "pahang tua", "sanggang", "semantan", "songsang",
         "chenor", "kertau",
-        "burau", "hulu cheka", "hulu temebling", "temebling", "kangkong", "kelola", "pedah", "pulau tawar",
-        "batu yon", "cheka", "gua", "jelai", "kechau", "tanum"
+        "burau", "hulu cheka", "hulu temebling", "temebling", "kangkong", "kelola", "pedah", "pulau tawar"
     ]
     if any(z in dest for z in zon_pahang_1500):
         return 1500.00
 
     # 5. ZON KUANTAN, PEKAN, ROMPIN, CAMERON HIGHLANDS, BERA (PAHANG) & KELANTAN & TERENGGANU - RM1600 / RM1800
-    # Mengikut spesifikasi terkini: Kelantan (RM1800), Terengganu (RM1800)
     zon_rm1800 = [
         "kelantan", "terengganu",
         "kota bharu", "pasir mas", "tumpat", "bachok", "pasir puteh", "machang", "tanah merah", "kuala krai", "gua musang", "jeli",
@@ -464,4 +463,4 @@ def semak_tarikh_booking(tarikh_str):
 
 def dapatkan_harga_automatik(pickup, destinasi, jenis_trip="one_way", return_hari_sama=True, tier_jalan="normal"):
     """Fungsi pembantu utama untuk mendapatkan harga automatik One-Way atau Two-Way"""
-    return kira_harga_trip(pickup, destinasi, jenis_trip=jenis_trip, return_hari_sama=return_hari_sama, jarak_km=None, tier_jalan=tier_jalan)
+    return kira_harga_trip(lokasi_pickup, destinasi, jenis_trip=jenis_trip, return_hari_sama=return_hari_sama, jarak_km=None, tier_jalan=tier_jalan)
