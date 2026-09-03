@@ -3,14 +3,14 @@ import json
 import logging
 from datetime import datetime
 from dotenv import load_dotenv
-import google.generativeai as genai
+from google import genai
 from google.genai import types
+
 import tempat_menarik
 import info_jalan
 import sbleisure_profile
 import sop_payment
 import sbleisure_engine
-from google import genai
 
 # Konfigurasi Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -69,12 +69,12 @@ def kemaskini_konteks_pelanggan(no_telefon, mesej_user, mesej_zulfa, nama=None):
     if nama:
         memori[no_telefon]["nama"] = nama
 
-    # Simpan perbualan (Hadkan 10 perbualan terakhir untuk jimatkan token)[cite: 2]
+    # Simpan perbualan (Hadkan 10 perbualan terakhir untuk jimatkan token)
     sejarah = memori[no_telefon]["sejarah_mesej"]
     sejarah.append({"role": "user", "content": mesej_user, "timestamp": datetime.now().isoformat()})
     sejarah.append({"role": "assistant", "content": mesej_zulfa, "timestamp": datetime.now().isoformat()})
     
-    if len(sejarah) > 20:  # 10 pasang perbualan[cite: 2]
+    if len(sejarah) > 20:  # 10 pasang perbualan
         sejarah = sejarah[-20:]
         
     memori[no_telefon]["sejarah_mesej"] = sejarah
@@ -101,9 +101,13 @@ def bina_system_instruction():
             admin_notes = f.read()
 
     # SEMAKAN MASA REAL-TIME MALAYSIA
-    import pytz
-    tz_malaysia = pytz.timezone('Asia/Kuala_Lumpur')
-    sekarang = datetime.now(tz_malaysia)
+    try:
+        import pytz
+        tz_malaysia = pytz.timezone('Asia/Kuala_Lumpur')
+        sekarang = datetime.now(tz_malaysia)
+    except Exception:
+        sekarang = datetime.now()
+
     hari_ini = sekarang.strftime('%A') 
     jam_semasa = sekarang.strftime('%H:%M')
     angka_hari = sekarang.weekday() 
@@ -119,8 +123,8 @@ def bina_system_instruction():
     status_waktu = "DALAM WAKTU PEJABAT (Isnin-Jumaat, 8pg-5ptg)" if is_waktu_pejabat else "DI LUAR WAKTU PEJABAT / CUTI (Sabtu/Ahad atau selepas 5ptg)"
 
     system_prompt = f"""
-    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport[cite: 2].
-    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional[cite: 2].
+    Nama anda ialah zulfa, Pegawai Khidmat Pelanggan dari SB Leisure Transport.
+    Tugas utama anda ialah membantu pelanggan membuat sewaan bas, menjawab pertanyaan harga, dan memberikan khidmat pelanggan yang mesra, sopan, dan profesional.
 
     === STATUS MASA SEMASA (REAL-TIME) ===
     - Hari & Masa: {hari_ini}, {jam_semasa} (Waktu Malaysia)
@@ -139,24 +143,24 @@ def bina_system_instruction():
     {persona_text}
     
     === PANDUAN NADA & PERILAKU ===
-    1. Guna bahasa Melayu yang MESRA, SANTAI, sopan, dan santun (cth: "Tuan/Puan", "Boleh saya bantu?")[cite: 2].
-    2. Jika pelanggan bertanya tentang kenderaan selain 'Bas' (seperti Van, MPV, SUV atau pakej Tour), secara automatik maklumkan bahawa tempahan perlu dibuat terus melalui sales team di pautan: https://wa.link/nrmesv[cite: 2]
-    3. Jika tarikh tempahan kurang daripada 7 hari (urgent booking), rujuk pelanggan ke sales team[cite: 2].
-    4. Pastikan maklumat seperti Lokasi Pickup, Destinasi, Tarikh Pergi, Tarikh Balik (jika dua hala), dan Jumlah Pax lengkap sebelum memberikan quotation[cite: 2].
-    5. Apabila pelanggan bersedia membuat bayaran, tanya dahulu pilihan mereka: Adakah ingin membayar melalui Imbasan QR Code DuitNow atau Online Banking (`https://toyyibpay.com/sbl-online`), serta ingatkan mereka boleh pilih sama ada Deposit 50% atau Bayaran Penuh (Full Payment). Selepas mereka pilih, barulah berikan pilihan tersebut[cite: 2].
-    6. Balas mesej PENDEK dan ringkas JANGAN jawab mesej dengan panjang[cite: 2].
-    7. Selepas dapat mesej pertama dari pelanggan, terus tanya nak sewa bas, van, mpv atau suv, selepas customer jawab tanya untuk one way atau two way[cite: 2].
-    8. One way terus bagi borang one way, two way terus bagi borang two way[cite: 2].
-    9. Borang wajib diisi sebelum soalan seterusnya[cite: 2].
-    10. Mesej seperti manusia yang natural[cite: 2].
-    11. Mesej shortform seperti manusia contoh (nk, x, dkt, nnti, bz, sori, lg)[cite: 2].
-    12. Elakkan ulang soalan: Beritahu semak memori perbualan sebelumnya. Jika pelanggan sudah sebut jenis kenderaan (contoh: "bas") atau jenis trip, jangan tanya soalan itu lagi[cite: 2].
-    13. Guna bahasa Melayu malaysia santai, mesra, dan pandai ambil hati pelanggan (cth: "Baik bos", "Boleh je, tak ada masalah")[cite: 2].
-    14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang)[cite: 2].
-    15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip[cite: 2].
-    16. Sentiasa pastikan respons PENDEK, padat, dan mesra WhatsApp[cite: 2].
-    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin)[cite: 2].
-    18. Jika pelanggan meminta gambar bas atau kenderaan, arahkan mereka untuk melayari halaman Facebook rasmi syarikat di pautan berikut: https://www.facebook.com/sewabaspersiaranmurah[cite: 2]    
+    1. Guna bahasa Melayu yang MESRA, SANTAI, sopan, dan santun (cth: "Tuan/Puan", "Boleh saya bantu?").
+    2. Jika pelanggan bertanya tentang kenderaan selain 'Bas' (seperti Van, MPV, SUV atau pakej Tour), secara automatik maklumkan bahawa tempahan perlu dibuat terus melalui sales team di pautan: https://wa.link/nrmesv
+    3. Jika tarikh tempahan kurang daripada 7 hari (urgent booking), rujuk pelanggan ke sales team.
+    4. Pastikan maklumat seperti Lokasi Pickup, Destinasi, Tarikh Pergi, Tarikh Balik (jika dua hala), dan Jumlah Pax lengkap sebelum memberikan quotation.
+    5. Apabila pelanggan bersedia membuat bayaran, tanya dahulu pilihan mereka: Adakah ingin membayar melalui Imbasan QR Code DuitNow atau Online Banking (`https://toyyibpay.com/sbl-online`), serta ingatkan mereka boleh pilih sama ada Deposit 50% atau Bayaran Penuh (Full Payment). Selepas mereka pilih, barulah berikan pilihan tersebut.
+    6. Balas mesej PENDEK dan ringkas JANGAN jawab mesej dengan panjang.
+    7. Selepas dapat mesej pertama dari pelanggan, terus tanya nak sewa bas, van, mpv atau suv, selepas customer jawab tanya untuk one way atau two way.
+    8. One way terus bagi borang one way, two way terus bagi borang two way.
+    9. Borang wajib diisi sebelum soalan seterusnya.
+    10. Mesej seperti manusia yang natural.
+    11. Mesej shortform seperti manusia contoh (nk, x, dkt, nnti, bz, sori, lg).
+    12. Elakkan ulang soalan: Beritahu semak memori perbualan sebelumnya. Jika pelanggan sudah sebut jenis kenderaan (contoh: "bas") atau jenis trip, jangan tanya soalan itu lagi.
+    13. Guna bahasa Melayu malaysia santai, mesra, dan pandai ambil hati pelanggan (cth: "Baik bos", "Boleh je, tak ada masalah").
+    14. **PENTING (JANGAN ULANG SOALAN):** Sentiasa baca sejarah perbualan sebelum membalas. Jika pelanggan sudah beritahu jenis kenderaan (bas/mpv) atau jenis trip (one-way/two-way), JANGAN TANYA SOALAN YANG SAMA SEMULA. Terus ke langkah seterusnya (seperti minta butiran lokasi pickup/borang).
+    15. Jika pelanggan tanya soalan luar jangkaan, layan dengan cerdik dan berhemah, jangan terus ulang skrip.
+    16. Sentiasa pastikan respons PENDEK, padat, dan mesra WhatsApp.
+    17. Jika pelanggan ingin menyemak status tempahan sedia ada, semak memori perbualan mereka dan beritahu status terkini tempahan mereka secara ringkas dan jelas (contoh: status sebut harga, menunggu bayaran deposit, atau telah dihantar kepada admin).
+    18. Jika pelanggan meminta gambar bas atau kenderaan, arahkan mereka untuk melayari halaman Facebook rasmi syarikat di pautan berikut: https://www.facebook.com/sewabaspersiaranmurah    
     19. STRICT GATEKEEPING PICKUP: Hanya terima lokasi pickup di Selangor, KL, Putrajaya,Cyberjaya,KLIA,klia, pickup Di luar kawasan pickup, tolak dan beri link: https://wa.link/nrmesv.    
     20. Hanya sewa bas DIBENARKAN untuk tempahan online, Van,mpv dan suv TIDAK DIBENARKAN untuk tempahan online terus beri link wahatsapp sales.
     21. WAJIB isi borang dulu SEBELUM bagi harga dan wajib isi semua detail untuk one way atau two way.
@@ -329,7 +333,7 @@ def senaraikan_semua_negeri():
     return list(DESTINASI_SEMENANJUNG.keys())
 
 def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
-    """Menerima mesej daripada pelanggan dan memulangkan respons Zulfa menggunakan Gemini 3.5 Flash Lite."""
+    """Menerima mesej daripada pelanggan dan memulangkan respons Zulfa menggunakan Gemini."""
     if not client:
         return "Ralat: GEMINI_API_KEY tidak dikonfigurasikan dengan betul."
 
@@ -347,11 +351,11 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
                 f"Ada maklumat tambahan mengenai jumlah penumpang untuk trip ini?"
             )
 
-    # 1. Dapatkan sejarah perbualan pelanggan[cite: 2]
+    # 1. Dapatkan sejarah perbualan pelanggan
     data_pelanggan = dapatkan_konteks_pelanggan(no_telefon)
     sejarah = data_pelanggan.get("sejarah_mesej", [])
 
-    # 2. Bina pesanan perbualan untuk Gemini API[cite: 2]
+    # 2. Bina pesanan perbualan untuk Gemini API
     contents = []
     for h in sejarah:
         contents.append(types.Content(
@@ -359,7 +363,7 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
             parts=[types.Part.from_text(text=h["content"])]
         ))
     
-    # Tambah mesej terkini daripada pengguna[cite: 2]
+    # Tambah mesej terkini daripada pengguna
     contents.append(types.Content(
         role="user",
         parts=[types.Part.from_text(text=mesej_user)]
@@ -374,16 +378,16 @@ def proses_mesej(no_telefon, mesej_user, nama_pelanggan=None):
     )
 
     try:
-        # 4. Panggil model Gemini 3.5 Flash Lite[cite: 2]
+        # 4. Panggil model Gemini
         response = client.models.generate_content(
-            model="gemini-3.5-flash-lite",
+            model="gemini-2.5-flash",
             contents=contents,
             config=config
         )
         
         jawapan_zulfa = response.text.strip()
 
-        # 5. Kemaskini memori perbualan[cite: 2]
+        # 5. Kemaskini memori perbualan
         kemaskini_konteks_pelanggan(no_telefon, mesej_user, jawapan_zulfa, nama=nama_pelanggan)
 
         return jawapan_zulfa

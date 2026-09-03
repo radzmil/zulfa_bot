@@ -20,7 +20,6 @@ CORS(app)
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# Struktur pangkalan data sembang langsung yang diseragamkan ID menggunakan nombor telefon
 live_chats_db = {
     "sbltransport": [
         {
@@ -89,9 +88,9 @@ def get_chats():
 @app.route("/api/chats/reply", methods=["POST"])
 def reply_chat():
     try:
-        data = request.json
-        chat_id = str(data.get('chat_id')) # Pastikan format string (nombor telefon)
-        reply_text = data.get('text')
+        data = request.json or {}
+        chat_id = str(data.get('chat_id', ''))
+        reply_text = data.get('text', '')
         target_phone = data.get('phone')
 
         if not target_phone or target_phone == "None":
@@ -103,7 +102,6 @@ def reply_chat():
         else:
             logging.warning(f"Gagal hantar WhatsApp: Nombor telefon tidak dijumpai untuk chat_id {chat_id}")
 
-        # Masukkan mesej ke dalam pangkalan data mengikut padanan ID (nombor telefon)
         dijumpai = False
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
@@ -127,8 +125,8 @@ def reply_chat():
 @app.route("/api/chats/toggle-mode", methods=["POST"])
 def toggle_mode():
     try:
-        data = request.json
-        chat_id = str(data.get('chat_id'))
+        data = request.json or {}
+        chat_id = str(data.get('chat_id', ''))
         
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
@@ -157,7 +155,7 @@ def verify_whatsapp_webhook():
 
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
-    data = request.json
+    data = request.json or {}
     logging.info(f"Mesej diterima: {data}")
 
     try:
@@ -172,16 +170,20 @@ def whatsapp_webhook():
         value = changes[0].get("value", {})
         messages = value.get("messages", [])
         
+        # Elakkan ralat jika webhook hanyalah status notification (delivered/read/sent)
         if not messages:
             return jsonify({"status": "ignored", "reason": "no messages array"}), 200
 
         msg_obj = messages[0]
-        sender_phone = str(msg_obj.get("from")).replace("+", "").strip()
+        sender_phone = str(msg_obj.get("from", "")).replace("+", "").strip()
+        if not sender_phone:
+            return jsonify({"status": "ignored", "reason": "no sender phone"}), 200
         
         message_text = ""
-        if msg_obj.get("type") == "text":
+        msg_type = msg_obj.get("type")
+        if msg_type == "text":
             message_text = msg_obj.get("text", {}).get("body", "").strip()
-        elif msg_obj.get("type") == "image":
+        elif msg_type == "image":
             message_text = "[Gambar / Resit Dihantar]"
 
         message_lower = message_text.lower()
@@ -194,12 +196,12 @@ def whatsapp_webhook():
                 found_chat = chat
                 break
 
-        # Jika pelanggan baru menghantar mesej WhatsApp, masukkan terus ke dalam senarai secara dinamik
+        # Masukkan pengguna baharu ke memori perbualan aktif
         if not found_chat:
             admin_phone = "60132434200"
             if sender_phone != admin_phone:
                 found_chat = {
-                    "id": sender_phone, # Gunakan nombor telefon sebagai ID unik supaya sepadan dengan frontend
+                    "id": sender_phone,
                     "customerName": f"Pelanggan ({sender_phone})",
                     "phone": f"+{sender_phone}",
                     "lastMessage": message_text,
@@ -230,19 +232,25 @@ def whatsapp_webhook():
             logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
             return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
 
+        # Pengendalian kata kunci QR Code
         if any(keyword in message_lower for keyword in KEYWORDS_QR):
+            toyyib_link = getattr(sop_payment, 'TOYYIBPAY_LINK', 'https://toyyibpay.com/sbl-online')
             caption_teks = (
                 "Berikut adalah QR Code DuitNow CIMB rasmi **SHAHRIL BASRI LEISURE ENTERPRISE**.\n\n"
                 "Sila imbas untuk membuat bayaran **50% deposit** atau **Bayaran Penuh (Full Payment)**.\n"
                 "*(PENTING: Sila letakkan nombor telefon anda pada bahagian rujukan/reference pemindahan)*\n\n"
-                f"Pautan ToyyibPay alternatif: {getattr(sop_payment, 'TOYYIBPAY_LINK', 'https://toyyibpay.com')}\n\n"
+                f"Pautan ToyyibPay alternatif: {toyyib_link}\n\n"
                 "Selepas bayaran dibuat, sila hantar resit di sini ya. Terima kasih!"
             )
             qr_link = getattr(sop_payment, "QR_CODE_DIRECT_LINK", "")
-            hantar_imej_whatsapp(phone=sender_phone, image_url=qr_link, caption=caption_teks)
+            if qr_link:
+                hantar_imej_whatsapp(phone=sender_phone, image_url=qr_link, caption=caption_teks)
+            else:
+                hantar_teks_whatsapp(sender_phone, caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
-        if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_obj.get("type") == "image":
+        # Pengendalian kata kunci Bayaran atau Resit
+        if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_type == "image":
             data_tempahan_baru = {
                 "ref_id": f"SB-{sender_phone[-4:]}",
                 "nama": f"Pelanggan ({sender_phone})",
@@ -263,11 +271,11 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
+        # Proses jawapan bot melalui AI
         if message_text and message_text != "[Gambar / Resit Dihantar]":
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
             
-            # Masukkan balasan AI ke dalam rekod database live chat
             if found_chat:
                 found_chat['messages'].append({"sender": "ai", "text": jawapan_ai, "time": datetime.now().strftime('%I:%M %p')})
                 found_chat['lastMessage'] = jawapan_ai
@@ -295,8 +303,11 @@ def hantar_teks_whatsapp(phone, text):
         "text": {"body": text},
     }
     
-    response = requests.post(url, json=payload, headers=headers)
-    logging.info(f"Respons hantar WhatsApp ke {clean_phone}: {response.status_code} - {response.text}")
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        logging.info(f"Respons hantar WhatsApp ke {clean_phone}: {response.status_code} - {response.text}")
+    except Exception as e:
+        logging.error(f"Ralat sambungan Meta API (teks): {e}")
 
 def hantar_imej_whatsapp(phone, image_url, caption):
     token = os.getenv("WHATSAPP_TOKEN")
@@ -305,12 +316,9 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
-        "Authorization": f"Bearer `token`", # Disesuaikan ikut token env
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
-    # Menggunakan token env sebenar
-    headers["Authorization"] = f"Bearer {token}"
-    
     payload = {
         "messaging_product": "whatsapp",
         "to": clean_phone,
@@ -321,8 +329,11 @@ def hantar_imej_whatsapp(phone, image_url, caption):
         }
     }
     
-    response = requests.post(url, json=payload, headers=headers)
-    logging.info(f"Respons hantar Imej QR ke {clean_phone}: {response.status_code} - {response.text}")
+    try:
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        logging.info(f"Respons hantar Imej QR ke {clean_phone}: {response.status_code} - {response.text}")
+    except Exception as e:
+        logging.error(f"Ralat sambungan Meta API (imej): {e}")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
