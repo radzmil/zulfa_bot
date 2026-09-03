@@ -13,6 +13,7 @@ def get_engine_rules_text():
       * Ampang ke Seremban: RM1,354
       * KLIA ke Seremban: RM1,300
       * Ampang ke Port Dickson: RM1,420
+      * KLIA ke Port Dickson: RM1,220
       * Ampang ke Rawang: RM850
       * KLIA ke Rawang: RM990
       * Ampang ke Bukit Beruntung: RM850
@@ -86,36 +87,124 @@ def validasi_pickup(lokasi):
     return sah, harga_asas
 
 def dapatkan_harga_asas_destinasi(destinasi):
-    """Menentukan harga asas (50 km pertama) berdasarkan zon mukim destinasi"""
+    """Menentukan harga asas (50 km pertama) berdasarkan zon mukim destinasi mengikut struktur baru"""
     dest = str(destinasi).strip().lower()
     
-    zon_700 = ["ampang", "cheras", "hulu langat", "batu", "setapak", "ulu kelang", "kuala lumpur", "pusat bandar", "bukit bintang", "chow kit", "brickfields", "bangsar", "seputeh", "kepong", "segambut", "sentul", "jalan ipoh", "mont kiara", "sri hartamas", "batu caves", "wangsa maju", "danau kota", "taman melati", "semarak", "ampang hilir", "kampung pandan", "desa pandan", "maluri"]
-    if any(z in dest for z in zon_700):
+    # 1. ZON SELANGOR, KL, PUTRAJAYA, CYBERJAYA, KLIA (RM700)
+    zon_selangor_kl = [
+        "selangor", "kuala lumpur", "kl", "putrajaya", "cyberjaya", "klia", "airport",
+        "ampang", "cheras", "hulu langat", "batu", "setapak", "ulu kelang", "pusat bandar",
+        "bukit bintang", "chow kit", "brickfields", "bangsar", "seputeh", "kepong", "segambut",
+        "sentul", "jalan ipoh", "mont kiara", "sri hartamas", "batu caves", "wangsa maju",
+        "danau kota", "taman melati", "semarak", "ampang hilir", "kampung pandan", "desa pandan",
+        "maluri", "damansara", "petaling", "kajang", "semenyih", "rawang", "dengkil",
+        "sepang", "labu", "bukit raja", "sungai buloh", "sg buloh", "beranang", "kapar", "klang",
+        "bandar", "jugra", "kelanang", "morib", "tanjong duabelas", "telok panglima garang",
+        "ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang",
+        "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam",
+        "api-api", "batang berjuntai", "bestari jaya", "ijok", "jeram", "kuala selangor",
+        "pasangan", "tanjong karang", "ujong pematang", "ulu tinggi", "bagan nakhoda omar",
+        "panchang bedena", "pasiran panjang", "sabak", "sungai panjang"
+    ]
+    if any(z in dest for z in zon_selangor_kl):
         return 700.00
 
-    zon_800 = ["klia", "cyberjaya", "putrajaya", "airport", "damansara", "petaling", "kajang", "semenyih", "rawang", "dengkil", "sepang", "labu"]
-    if any(z in dest for z in zon_800):
-        return 800.00
-
-    zon_900 = ["bukit raja", "sungai buloh", "sg buloh", "beranang", "kapar", "klang"]
-    if any(z in dest for z in zon_900):
-        return 900.00
-
-    zon_1000 = ["bandar", "jugra", "kelanang", "morib", "tanjong duabelas", "telok panglima garang", "ampang pecah", "batang kali", "buloh telor", "kalumpang", "kerling", "kuala kalumpang", "peretak", "rasa", "serendah", "sungai gumut", "sungai tinggi", "ulu bernam", "ulu yam"]
-    if any(z in dest for z in zon_1000):
-        return 1000.00
-
-    zon_1200 = ["api-api", "batang berjuntai", "bestari jaya", "ijok", "jeram", "kuala selangor", "pasangan", "tanjong karang", "ujong pematang", "ulu tinggi", "bagan nakhoda omar", "panchang bedena", "pasiran panjang", "sabak", "sungai panjang", "ampangan", "lenggeng", "pantai", "rantau", "rasah", "seremban", "setul", "jimah", "linggi", "pasir panjang", "port dickson", "si rusa", "tapah"]
-    if any(z in dest for z in zon_1200):
+    # 2. ZON MELAKA & NEGERI SEMBILAN (RM1200)
+    zon_melaka_ns = [
+        "melaka tengah", "alor gajah", "jasin", "seremban", "port dickson", "rembau", 
+        "kuala pilah", "jelebu", "jempol", "tampin",
+        "alai", "ayer molek", "bachang", "balai panjang", "batu berendam", "bukit baru", 
+        "bukit katil", "bukit piatu", "bukit rambai", "cheng", "duyong", "kandang", 
+        "klebang besar", "klebang kecil", "krubong", "limbongan", "paya rumput", "peringgit", 
+        "pernu", "semabok", "sungai baru", "sungai udang", "tangga batu", "tanjung kling", 
+        "telok mas", "ujong pasir", "bertam", "padang temu", "kelewang", "ayer pa'abas", 
+        "batang melaka", "belimbing", "bukit milin", "brisu", "durian tunggal", "gadek", 
+        "jelatang", "kelemak", "kuala sungai baru", "kundor", "lendu", "lubok china", 
+        "machap", "melekek", "padang sebang", "pegoh", "pulau sebang", "ramuan china besar", 
+        "ramuan china kecil", "rembia", "sungai buloh", "taboh naning", "tampin linggi", 
+        "tanjung rimau", "tebong", "tiga muka", "ayer limau", "londang", "solok", "jelai", 
+        "asahan", "ayer panas", "bemban", "chohong", "chin-chin", "jus", "kesang", 
+        "merlimau", "nyalas", "panchor", "rim", "sebak", "selandar", "serkam", "sebatu", 
+        "tehel", "kesang pajak", "chinchin", "tedong", "lipat kajang", "ampangan", "labu", 
+        "lenggeng", "pantai", "rantau", "rasah", "setul", "jimah", "linggi", "pasir panjang", 
+        "si rusa", "batu kikir", "chembong", "gadong", "kota", "legong hilir", 
+        "legong hulu", "mambau", "nerasau", "pedas", "pilin", "seberang", "titian bintangor", 
+        "batu hampar", "gadong hilir", "ampang tinggi", "johol", "juasseh", "kepis", 
+        "langkap", "seri menanti", "ulu jempol", "terachi", "parit tinggi", 
+        "glami lemi", "hulu klawang", "klawang", "pertang", "peradong", "kenaboi", 
+        "triang hilir", "ulu triang", "serting ilir", "serting hulu", "palong", "ayer kuning", 
+        "gemencheh", "gemas", "ladang", "tampin tengah"
+    ]
+    if any(z in dest for z in zon_melaka_ns):
         return 1200.00
 
-    zon_1400 = ["batu kikir", "chembong", "gadong", "kota", "kundor", "legong hilir", "legong hulu", "mambau", "nerasau", "pedas", "pilin", "seberang", "titian bintangor", "batu hampar", "gadong hilir", "rembau bandar", "ampang tinggi", "johol", "juasseh", "kepas", "kuala pilah", "langkap", "seri menanti", "ulu jempol", "terachi", "parit tinggi", "glami lemi", "hulu klawang", "klawang", "kuala klawang", "pertang", "peradong", "kenaboi", "triang hilir", "ulu triang"]
-    if any(z in dest for z in zon_1400):
+    # 3. ZON PERAK (RM1200)
+    zon_perak = [
+        "kinta", "larut", "matang", "selama", "manjung", "batang padang", "hilir perak", 
+        "kerian", "hulu perak", "kuala kangsar", "bagan datuk", "muallim", "kampar",
+        "hulu kinta", "tanjong rambutan", "sungai terap", "belanja", "asam kumbang", 
+        "batu kurau", "bukit gantang", "jebong", "kamunting", "pengkalan aor", "selama", 
+        "sungai limau", "taiping", "trong", "beruas", "dindings", "lumut", "sitiawan", 
+        "bidor", "chenderiang", "padang rengas", "sungkai", "slim", "bagan datok", 
+        "changkat jong", "durian sebatang", "labu kubong", "rungkup", "teluk anson", 
+        "bagan serai", "gunong semanggol", "kuala kurau", "parit buntar", "selinsing", 
+        "tanjung piandang", "belum", "gerik", "kenering", "lenggong", "pengkalan hulu", 
+        "temengor", "chenderoh", "kota lama kiri", "kota lama kanan", "lubok merbau", 
+        "pulau kamiri", "saiong", "sayong", "sungei siput", "hutan melintang", "behrang", 
+        "ulu bernam barat", "teja", "gopeng"
+    ]
+    if any(z in dest for z in zon_perak):
+        return 1200.00
+
+    # 4. ZON LUAR PULAU (PULAU PINANG - SEBERANG PERAI UTARA, TENGAH, SELATAN): RM1300
+    zon_pp_luar = ["seberang perai", "butterworth", "kepala batas", "tasek gelugor", "bukit mertajam", "perai", "seberang jaya", "nibong tebal", "sungai bakap", "batu kawan"]
+    if any(z in dest for z in zon_pp_luar):
+        return 1300.00
+
+    # 5. ZON DALAM PULAU (PULAU PINANG - TIMUR LAUT, BARAT DAYA): RM1400
+    zon_pp_dalam = ["timur laut", "barat daya", "georgetown", "george town", "batu ferringhi", "bayan lepas", "balik pulau", "batu maung", "jelutong", "ayer itam"]
+    if any(z in dest for z in zon_pp_dalam):
         return 1400.00
 
-    zon_1600 = ["jelai", "serting ilir", "serting hulu", "palong", "ayer kuning", "gemencheh", "gemas", "kepis", "ladang", "tampin tengah", "tampin", "ipoh", "taiping", "melaka", "kuantan", "johor bahru"]
-    if any(z in dest for z in zon_1600):
-        return 1600.00
+    # 6. ZON JOHOR, PERLIS & KEDAH: RM1500
+    zon_johor_perlis_kedah = [
+        "johor", "perlis", "kedah", "johor bahru", "muar", "batu pahat", "kluang", "kulai", 
+        "pontian", "segamat", "kota tinggi", "mersing", "tangkak", "arau", "abi", "chuping", 
+        "jejawi", "kangar", "kayang", "kuala perlis", "kurong anai", "kurong batang", "oran", 
+        "padang pauh", "padang siding", "paya", "sanglang", "sena", "seriab", "simpangan", 
+        "simpang empat", "utan aji", "wang bintong", "titi tinggi", "beseri", "guar sanji", 
+        "pauh", "kota setar", "kubang pasu", "langkawi", "padang terap", "kuala muda", "yan", 
+        "pendang", "sik", "baling", "kulim", "bandar baharu", "pokok sena", "plentong", 
+        "pulai", "senai", "tebrau", "tanjung kupang", "bakri", "bukit kepong", "jorak", 
+        "lenga", "parit menangis", "parit jawa", "raya", "seri menanti", "sungai raya", 
+        "sungai terap", "kesang", "bagan", "chaah", "kampung bahru", "linau", "minyak beku", 
+        "peserai", "pt. raja", "pt. sulong", "rengit", "simpang kanan", "simpang kiri", 
+        "sri gading", "tanjung semberong", "sungai punggor", "kahang", "layang-layang", 
+        "machap", "nyior", "paloh", "renggam", "ulu benut", "sedenak", "bukit batu", 
+        "api-api", "ayer baloi", "benut", "jeram batu", "karangan", "rimba terjun", 
+        "serkat", "sungai karang", "penerok", "pulai sebatang", "bekok", "jabi", "jementah", 
+        "pogoh", "sermin", "buloh kasap", "labis", "sungai segamat", "johor lama", "kambau", 
+        "lenik", "pengerang", "desaru", "sedili besar", "sedili kecil", "semanggar", 
+        "sungai papan", "ulu sungai johor", "tenglu", "triang", "penyabong", "jemaluang", 
+        "padang endau", "pulau tinggi", "pulau sibu", "pulau aur", "pulau pemanggil", 
+        "bukit serampang", "grisek", "kundang", "serom",
+        "alor malai", "alor setar", "anak bukit", "derga", "gunong", "kangkong", "kubang rotan", 
+        "langgar", "lepai", "limbong", "mergong", "pengkalan kundor", "sala kechil", "tajar", 
+        "telok kechai", "tebengau", "ah", "asun", "bukit lada", "hosba", "jitra", "jerlun", 
+        "kepayang", "kubang pasu", "malau", "naga", "padang perahu", "pering", "pelubang", 
+        "tunjang", "temin", "ayer hangat", "bohor", "kedawang", "kuah", "padang matsirat", 
+        "temonyong", "batang perahu", "belimbing kanan", "belimbing kiri", "kurong appendang", 
+        "naka", "padang terap kanan", "padang terap kiri", "pedu", "tekai", "tualak", "bujang", 
+        "gurun", "kuala merbok", "merbok", "muda", "pekan bujang", "petani", "pinang tunggal", 
+        "semeling", "sidam kanan", "sungai petani", "teloi kanan", "dulang", "sala besar", 
+        "singkir", "yan", "ayer puteh", "bukit panchor", "guar kepayang", "kubur panjang", 
+        "padang peliang", "padang kerbau", "pendang", "tob keling", "jeneri", "kalai", "sik", 
+        "sok", "bakai", "kupang", "puli", "siong", "tawar", "bagan sena", "lunas", "mahang", 
+        "nesa", "padang meha", "sedim", "sungai seluang", "terap", "bagan samak", "bandar baharu", 
+        "permatang pasir", "relau", "serdang", "bukit payong", "derang", "lesong", "tualang"
+    ]
+    if any(z in dest for z in zon_johor_perlis_kedah):
+        return 1500.00
 
     return 700.00
 
@@ -128,6 +217,7 @@ JADUAL_HARGA_BAS_TETAP = {
     ("ampang", "seremban"): 1354,
     ("klia", "seremban"): 1300,
     ("ampang", "port dickson"): 1420,
+    ("klia", "port dickson"): 1220,
     ("ampang", "rawang"): 850,
     ("klia", "rawang"): 990,
     ("ampang", "bukit beruntung"): 850,
