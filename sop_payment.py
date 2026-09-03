@@ -9,8 +9,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Konstanta Admin & Pautan Rasmi Syarikat
-GROUP_ADMIN_NUMBER = "60132434200"
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "sbltransport.my@gmail.com")
+GROUP_ADMIN_NUMBER = os.getenv("GROUP_ADMIN_NUMBER", "60132434200")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "radzmil@gmail.com")
 TOYYIBPAY_LINK = "https://toyyibpay.com/sbl-online"
 QR_CODE_DIRECT_LINK = "https://i.ibb.co/YTP80GLk/Whats-App-Image-2026-08-19-at-9-27-28-PM.jpg"
 
@@ -56,7 +56,7 @@ def paparkan_terma_pembayaran_ringkas():
     )
 
 def format_admin_notification(data):
-    """Format mesej pemberitahuan pantas untuk Admin WhatsApp."""
+    """Format mesej pemberitahuan pantas untuk Admin WhatsApp & Emel."""
     return (
         f"🚨 *NOTIFIKASI TEMPAHAN / PEMBAYARAN BAHARU* 🚨\n\n"
         f"• *ID Tempahan:* {data.get('ref_id', '-')}\n"
@@ -71,18 +71,18 @@ def format_admin_notification(data):
     )
 
 def hantar_emel_admin(data_tempahan):
-    """Menghantar salinan maklumat tempahan ke emel pentadbiran rasmi."""
+    """Menghantar salinan maklumat tempahan dan pengesahan QR ke emel pentadbiran rasmi."""
     smtp_server = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", 587))
-    sender_email = os.getenv("SMTP_EMAIL", "zulfa.sbltransport@gmail.com")
-    sender_password = os.getenv("SMTP_PASSWORD", "")
+    sender_email = os.getenv("SMTP_EMAIL", "radzmil@gmail.com")
+    sender_password = os.getenv("SMTP_PASSWORD", "H@$$ayang8683")
     admin_email = os.getenv("ADMIN_EMAIL", ADMIN_EMAIL)
 
     if not sender_password:
         logging.warning("Penghantaran emel dibatalkan: SMTP_PASSWORD tidak ditetapkan dalam .env")
         return False
 
-    subjek = f"🔔 Tempahan Baharu Disahkan - Ref: {data_tempahan.get('ref_id', 'SB-LEISURE')}"
+    subjek = f"🔔 Tempahan & Pengesahan QR Baharu - Ref: {data_tempahan.get('ref_id', 'SB-LEISURE')}"
     isi_mesej = format_admin_notification(data_tempahan)
 
     msg = MIMEMultipart()
@@ -97,7 +97,7 @@ def hantar_emel_admin(data_tempahan):
         server.login(sender_email, sender_password)
         server.sendmail(sender_email, admin_email, msg.as_string())
         server.quit()
-        logging.info(f"Emel pengesahan berjaya dihantar ke {admin_email}")
+        logging.info(f"Emel pengesahan tempahan & QR berjaya dihantar ke {admin_email}")
         return True
     except Exception as e:
         logging.error(f"Ralat menghantar emel notifikasi admin: {e}")
