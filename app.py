@@ -20,7 +20,7 @@ CORS(app)
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# DIKEKALKAN: Memori asal dan sokongan penuh pelbagai klien
+# Pangkalan data memori sokongan untuk sbltransport dan klien lain
 live_chats_db = {
     "sbltransport": [
         {
@@ -58,7 +58,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.6"
+        "version": "2.7"
     }), 200
 
 @app.route("/api/clients", methods=["GET"])
@@ -237,7 +237,7 @@ def whatsapp_webhook():
 
         message_lower = message_text.lower()
         
-        # KEMASKINI DINAMIK: Pastikan ia menyemak atau mencipta senarai chat di bawah 'sbltransport' secara konsisten
+        # Pengecaman dinamik pangkalan data live chat sbltransport
         if "sbltransport" not in live_chats_db:
             live_chats_db["sbltransport"] = []
         sbl_chats = live_chats_db["sbltransport"]
