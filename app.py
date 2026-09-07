@@ -31,7 +31,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.9"
+        "version": "2.10"
     }), 200
 
 @app.route("/api/clients", methods=["GET"])
@@ -197,8 +197,15 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored", "reason": "no messages array"}), 200
 
         msg_obj = messages[0]
-        sender_phone = str(msg_obj.get("from", "")).replace("+", "").strip()
-        if not sender_phone:
+        
+        # Pengecaman nombor telefon yang kebal (fallback untuk iPhone/iOS)
+        sender_phone = str(
+            msg_obj.get("from") 
+            or value.get("contacts", [{}])[0].get("wa_id", "") 
+            or msg_obj.get("sender", "")
+        ).replace("+", "").strip()
+
+        if not sender_phone or sender_phone == "None":
             return jsonify({"status": "ignored", "reason": "no sender phone"}), 200
         
         message_text = ""
