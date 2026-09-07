@@ -20,7 +20,7 @@ CORS(app)
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# DIKEKALKAN: Memori asal dan ditambah sokongan penuh untuk 'sbltransport'
+# DIKEKALKAN: Memori asal dan sokongan penuh pelbagai klien
 live_chats_db = {
     "sbltransport": [
         {
@@ -58,7 +58,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.5"
+        "version": "2.6"
     }), 200
 
 @app.route("/api/clients", methods=["GET"])
@@ -77,7 +77,6 @@ def get_clients_data():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint multi-tenant untuk Vercel portal (/api/<username>/chats)
 @app.route("/api/<username>/chats", methods=["GET"])
 def get_chats_multitenant(username):
     try:
@@ -86,7 +85,6 @@ def get_chats_multitenant(username):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# DIKEKALKAN: Endpoint asal get_chats
 @app.route("/api/chats", methods=["GET"])
 def get_chats():
     try:
@@ -96,12 +94,10 @@ def get_chats():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint multi-tenant untuk reply mesyuarat
 @app.route("/api/<username>/chats/reply", methods=["POST"])
 def reply_chat_multitenant(username):
     return proses_balasan_chat_logik(username)
 
-# DIKEKALKAN: Endpoint asal reply
 @app.route("/api/chats/reply", methods=["POST"])
 def reply_chat():
     return proses_balasan_chat_logik("sbltransport")
@@ -132,7 +128,6 @@ def proses_balasan_chat_logik(target_db_key):
                 dijumpai = True
                 break
 
-        # Jika tak jumpa dalam key spesifik, cari di semua key database
         if not dijumpai:
             for client_key in live_chats_db:
                 for chat in live_chats_db[client_key]:
@@ -153,12 +148,10 @@ def proses_balasan_chat_logik(target_db_key):
         logging.error(f"Ralat pada proses balasan chat: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint multi-tenant untuk toggle mode AI/Human
 @app.route("/api/<username>/chats/toggle-mode", methods=["POST"])
 def toggle_mode_multitenant(username):
     return proses_toggle_mode_logik(username)
 
-# DIKEKALKAN: Endpoint asal toggle-mode
 @app.route("/api/chats/toggle-mode", methods=["POST"])
 def toggle_mode():
     return proses_toggle_mode_logik("sbltransport")
@@ -184,7 +177,6 @@ def proses_toggle_mode_logik(target_db_key):
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint terima data pendaftaran admin daripada Vercel portal
 @app.route("/api/admin/clients", methods=["POST"])
 def register_client_from_admin():
     try:
@@ -244,7 +236,11 @@ def whatsapp_webhook():
             message_text = "[Gambar / Resit Dihantar]"
 
         message_lower = message_text.lower()
-        sbl_chats = live_chats_db.get("sbltransport", [])
+        
+        # KEMASKINI DINAMIK: Pastikan ia menyemak atau mencipta senarai chat di bawah 'sbltransport' secara konsisten
+        if "sbltransport" not in live_chats_db:
+            live_chats_db["sbltransport"] = []
+        sbl_chats = live_chats_db["sbltransport"]
         
         found_chat = None
         for chat in sbl_chats:
