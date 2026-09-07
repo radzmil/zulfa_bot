@@ -20,37 +20,10 @@ CORS(app)
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# Pangkalan data memori sokongan untuk sbltransport dan klien lain
+# Pangkalan data memori dibersihkan sepenuhnya tanpa sebarang mesej dummy
 live_chats_db = {
-    "sbltransport": [
-        {
-            "id": "60132434200",
-            "customerName": "Pelanggan Tempahan Transport",
-            "phone": "+60132434200",
-            "lastMessage": "Salam, nak tanya kadar sewaan bas/van ke Cameron Highlands?",
-            "time": "12:30 PM",
-            "mode": "ai",
-            "messages": [
-                {"sender": "customer", "text": "Salam, nak tanya kadar sewaan bas/van ke Cameron Highlands?", "time": "12:30 PM"},
-                {"sender": "ai", "text": "Waalaikumussalam! Ya boleh. Sila nyatakan tarikh dan bilangan penumpang ya.", "time": "12:31 PM"}
-            ]
-        }
-    ],
-    "aluzlia": [
-        {
-            "id": "60123456789",
-            "customerName": "Ahmad bin Ali",
-            "phone": "+60123456789",
-            "lastMessage": "Berapa harga pakej sebulan?",
-            "time": "11:02 AM",
-            "mode": "ai",
-            "messages": [
-                {"sender": "customer", "text": "Hi, selamat tengah hari.", "time": "11:00 AM"},
-                {"sender": "client", "text": "Hi Ahmad, ada apa yang boleh saya bantu?", "time": "11:01 AM"},
-                {"sender": "customer", "text": "Berapa harga pakej sebulan?", "time": "11:02 AM"}
-            ]
-        }
-    ]
+    "sbltransport": [],
+    "aluzlia": []
 }
 
 @app.route("/", methods=["GET"])
@@ -58,7 +31,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.7"
+        "version": "2.9"
     }), 200
 
 @app.route("/api/clients", methods=["GET"])
@@ -237,7 +210,6 @@ def whatsapp_webhook():
 
         message_lower = message_text.lower()
         
-        # Pengecaman dinamik pangkalan data live chat sbltransport
         if "sbltransport" not in live_chats_db:
             live_chats_db["sbltransport"] = []
         sbl_chats = live_chats_db["sbltransport"]
