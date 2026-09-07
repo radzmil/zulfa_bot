@@ -20,6 +20,7 @@ CORS(app)
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
+# DIKEKALKAN: Memori asal dan ditambah sokongan penuh untuk 'sbltransport'
 live_chats_db = {
     "sbltransport": [
         {
@@ -57,7 +58,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.4"
+        "version": "2.5"
     }), 200
 
 @app.route("/api/clients", methods=["GET"])
@@ -76,6 +77,16 @@ def get_clients_data():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint multi-tenant untuk Vercel portal (/api/<username>/chats)
+@app.route("/api/<username>/chats", methods=["GET"])
+def get_chats_multitenant(username):
+    try:
+        chats = live_chats_db.get(username, live_chats_db.get("sbltransport", []))
+        return jsonify({"success": True, "chats": chats}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# DIKEKALKAN: Endpoint asal get_chats
 @app.route("/api/chats", methods=["GET"])
 def get_chats():
     try:
@@ -85,8 +96,17 @@ def get_chats():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint multi-tenant untuk reply mesyuarat
+@app.route("/api/<username>/chats/reply", methods=["POST"])
+def reply_chat_multitenant(username):
+    return proses_balasan_chat_logik(username)
+
+# DIKEKALKAN: Endpoint asal reply
 @app.route("/api/chats/reply", methods=["POST"])
 def reply_chat():
+    return proses_balasan_chat_logik("sbltransport")
+
+def proses_balasan_chat_logik(target_db_key):
     try:
         data = request.json or {}
         chat_id = str(data.get('chat_id', ''))
@@ -103,15 +123,26 @@ def reply_chat():
             logging.warning(f"Gagal hantar WhatsApp: Nombor telefon tidak dijumpai untuk chat_id {chat_id}")
 
         dijumpai = False
-        for client_key in live_chats_db:
-            for chat in live_chats_db[client_key]:
-                if str(chat['id']) == str(chat_id) or str(chat['phone']).replace("+", "") == str(chat_id).replace("+", ""):
-                    chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
-                    chat['lastMessage'] = reply_text
-                    dijumpai = True
-                    break
-            if dijumpai:
+        db_to_use = live_chats_db.get(target_db_key, live_chats_db["sbltransport"])
+        
+        for chat in db_to_use:
+            if str(chat['id']) == str(chat_id) or str(chat['phone']).replace("+", "") == str(chat_id).replace("+", ""):
+                chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
+                chat['lastMessage'] = reply_text
+                dijumpai = True
                 break
+
+        # Jika tak jumpa dalam key spesifik, cari di semua key database
+        if not dijumpai:
+            for client_key in live_chats_db:
+                for chat in live_chats_db[client_key]:
+                    if str(chat['id']) == str(chat_id) or str(chat['phone']).replace("+", "") == str(chat_id).replace("+", ""):
+                        chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
+                        chat['lastMessage'] = reply_text
+                        dijumpai = True
+                        break
+                if dijumpai:
+                    break
 
         if dijumpai:
             return jsonify({"success": True, "message": "Mesej berjaya dihantar ke WhatsApp!"}), 200
@@ -119,22 +150,49 @@ def reply_chat():
             return jsonify({"success": False, "error": "Chat tidak dijumpai dalam database"}), 404
 
     except Exception as e:
-        logging.error(f"Ralat pada /api/chats/reply: {e}")
+        logging.error(f"Ralat pada proses balasan chat: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint multi-tenant untuk toggle mode AI/Human
+@app.route("/api/<username>/chats/toggle-mode", methods=["POST"])
+def toggle_mode_multitenant(username):
+    return proses_toggle_mode_logik(username)
+
+# DIKEKALKAN: Endpoint asal toggle-mode
 @app.route("/api/chats/toggle-mode", methods=["POST"])
 def toggle_mode():
+    return proses_toggle_mode_logik("sbltransport")
+
+def proses_toggle_mode_logik(target_db_key):
     try:
         data = request.json or {}
         chat_id = str(data.get('chat_id', ''))
         
+        db_to_use = live_chats_db.get(target_db_key, live_chats_db["sbltransport"])
+        for chat in db_to_use:
+            if str(chat['id']) == str(chat_id):
+                chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
+                return jsonify({"success": True, "mode": chat['mode']}), 200
+                
         for client_key in live_chats_db:
             for chat in live_chats_db[client_key]:
                 if str(chat['id']) == str(chat_id):
                     chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
                     return jsonify({"success": True, "mode": chat['mode']}), 200
-                
+
         return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+# TAMBAHAN BAHARU (Tanpa buang asal): Endpoint terima data pendaftaran admin daripada Vercel portal
+@app.route("/api/admin/clients", methods=["POST"])
+def register_client_from_admin():
+    try:
+        data = request.json or {}
+        username = data.get("username")
+        if username and username not in live_chats_db:
+            live_chats_db[username] = []
+        return jsonify({"success": True, "message": f"Klien {username} berjaya didaftarkan di pelayan bot!"}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -170,7 +228,6 @@ def whatsapp_webhook():
         value = changes[0].get("value", {})
         messages = value.get("messages", [])
         
-        # Elakkan ralat jika webhook hanyalah status notification (delivered/read/sent)
         if not messages:
             return jsonify({"status": "ignored", "reason": "no messages array"}), 200
 
@@ -196,7 +253,6 @@ def whatsapp_webhook():
                 found_chat = chat
                 break
 
-        # Masukkan pengguna baharu ke memori perbualan aktif
         if not found_chat:
             admin_phone = "60132434200"
             if sender_phone != admin_phone:
@@ -232,7 +288,6 @@ def whatsapp_webhook():
             logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
             return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
 
-        # Pengendalian kata kunci QR Code
         if any(keyword in message_lower for keyword in KEYWORDS_QR):
             toyyib_link = getattr(sop_payment, 'TOYYIBPAY_LINK', 'https://toyyibpay.com/sbl-online')
             caption_teks = (
@@ -249,7 +304,6 @@ def whatsapp_webhook():
                 hantar_teks_whatsapp(sender_phone, caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
-        # Pengendalian kata kunci Bayaran atau Resit
         if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_type == "image":
             data_tempahan_baru = {
                 "ref_id": f"SB-{sender_phone[-4:]}",
@@ -271,7 +325,6 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
-        # Proses jawapan bot melalui AI
         if message_text and message_text != "[Gambar / Resit Dihantar]":
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
