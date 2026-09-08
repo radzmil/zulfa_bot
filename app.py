@@ -20,7 +20,6 @@ CORS(app)
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# Pangkalan data memori dibersihkan sepenuhnya tanpa sebarang mesej dummy
 live_chats_db = {
     "sbltransport": [],
     "aluzlia": []
@@ -266,7 +265,6 @@ def whatsapp_webhook():
         else:
             current_chat_mode = "ai"
 
-        # Hantar mesej masuk pelanggan ke Google Sheet pusat secara real-time
         push_chat_to_sheets("sbltransport", sender_phone, "customer", message_text)
 
         admin_phone = "60132434200"
