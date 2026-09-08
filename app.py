@@ -36,8 +36,11 @@ def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
         "message": message_text,
     }
     try:
-        requests.post(apps_script_url, json=payload, timeout=5)
+        response = requests.post(apps_script_url, json=payload, timeout=10)
+        print(f"DEBUG SHEET SYNC: Status {response.status_code} - {response.text}")
+        logging.info(f"DEBUG SHEET SYNC: Status {response.status_code} - {response.text}")
     except Exception as e:
+        print(f"DEBUG SHEET ERROR: {e}")
         logging.error(f"Ralat hantar ke Google Sheet pusat: {e}")
 
 @app.route("/", methods=["GET"])
@@ -369,7 +372,7 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
+        "Content-Type": "application/json", semak
     }
     payload = {
         "messaging_product": "whatsapp",
