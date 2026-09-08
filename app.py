@@ -26,7 +26,7 @@ live_chats_db = {
 }
 
 def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
-    apps_script_url = "https://script.google.com/macros/s/AKfycyQ-R-XQ-N-b2SokBH-dB1l1LNDmwHivZv9-8q5H4lVptbiD8JSpqb9ySi_EesA55Ts/exec"
+    apps_script_url = "https://script.google.com/macros/s/AKfycbz8l_G5GTlh4XILRKXyEWgtk7UTYofa7QcEJceAVaMQYa56C6SDsV9cPCjVfd7GDOU/exec"
     payload = {
         "timestamp": datetime.now().isoformat(),
         "client": client_name,
