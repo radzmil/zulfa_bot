@@ -216,7 +216,6 @@ def whatsapp_webhook():
 
         msg_obj = messages[0]
         
-        # Pengecaman nombor telefon yang kebal (fallback untuk iPhone/iOS)
         sender_phone = str(
             msg_obj.get("from") 
             or value.get("contacts", [{}])[0].get("wa_id", "") 
@@ -372,7 +371,7 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json", semak
+        "Content-Type": "application/json",
     }
     payload = {
         "messaging_product": "whatsapp",
