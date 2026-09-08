@@ -50,6 +50,12 @@ def index():
         "version": "2.10"
     }), 200
 
+# Laluan ujian manual untuk mengesahkan fungsi sinkronisasi ke Google Sheet
+@app.route("/test-sheet", methods=["GET"])
+def test_sheet_sync():
+    push_chat_to_sheets("sbltransport", "+60132434200", "customer", "Ujian manual sinkronisasi sheet")
+    return jsonify({"status": "sent test data to sheet"}), 200
+
 @app.route("/api/clients", methods=["GET"])
 def get_clients_data():
     try:
