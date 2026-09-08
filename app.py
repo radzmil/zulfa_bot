@@ -26,6 +26,20 @@ live_chats_db = {
     "aluzlia": []
 }
 
+def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
+    apps_script_url = "https://script.google.com/macros/s/AKfycbwEoglQWQHuLI_SwP8nGWELMQ7wqD5JWJkKad0kRGcPMYBQ1B_O7fHiVNYR22ch8WbA/exec"
+    payload = {
+        "timestamp": datetime.now().isoformat(),
+        "client": client_name,
+        "phone": phone_number,
+        "sender": sender_type,
+        "message": message_text,
+    }
+    try:
+        requests.post(apps_script_url, json=payload, timeout=5)
+    except Exception as e:
+        logging.error(f"Ralat hantar ke Google Sheet pusat: {e}")
+
 @app.route("/", methods=["GET"])
 def index():
     return jsonify({
@@ -88,6 +102,7 @@ def proses_balasan_chat_logik(target_db_key):
         if target_phone and reply_text:
             clean_phone = str(target_phone).replace("+", "").strip()
             hantar_teks_whatsapp(clean_phone, reply_text)
+            push_chat_to_sheets(target_db_key, clean_phone, "agent", reply_text)
         else:
             logging.warning(f"Gagal hantar WhatsApp: Nombor telefon tidak dijumpai untuk chat_id {chat_id}")
 
@@ -249,6 +264,9 @@ def whatsapp_webhook():
         else:
             current_chat_mode = "ai"
 
+        # Hantar mesej masuk pelanggan ke Google Sheet pusat secara real-time
+        push_chat_to_sheets("sbltransport", sender_phone, "customer", message_text)
+
         admin_phone = "60132434200"
         if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
             nota_baru = message_text.replace("#nota", "").replace("#NOTA", "").replace("#ingat", "").replace("#INGAT", "").strip()
@@ -257,6 +275,7 @@ def whatsapp_webhook():
             
             teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
+            push_chat_to_sheets("sbltransport", sender_phone, "bot", teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
         if current_chat_mode == "human":
@@ -277,6 +296,8 @@ def whatsapp_webhook():
                 hantar_imej_whatsapp(phone=sender_phone, image_url=qr_link, caption=caption_teks)
             else:
                 hantar_teks_whatsapp(sender_phone, caption_teks)
+            
+            push_chat_to_sheets("sbltransport", sender_phone, "bot", caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
         if any(keyword in message_lower for keyword in KEYWORDS_BAYARAN) or msg_type == "image":
@@ -298,6 +319,7 @@ def whatsapp_webhook():
 
             balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan dihantar kepada pihak pengurusan (Admin) untuk disemak. Kami akan sahkan sebentar lagi."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
+            push_chat_to_sheets("sbltransport", sender_phone, "bot", balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
         if message_text and message_text != "[Gambar / Resit Dihantar]":
@@ -307,6 +329,8 @@ def whatsapp_webhook():
             if found_chat:
                 found_chat['messages'].append({"sender": "ai", "text": jawapan_ai, "time": datetime.now().strftime('%I:%M %p')})
                 found_chat['lastMessage'] = jawapan_ai
+
+            push_chat_to_sheets("sbltransport", sender_phone, "bot", jawapan_ai)
 
         return jsonify({"status": "success", "action": "sent_ai_response"}), 200
 
