@@ -26,8 +26,8 @@ live_chats_db = {
 }
 
 def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
-    # URL Rasmi Apps Script yang telah dibetulkan
-    apps_script_url = "https://script.google.com/macros/s/AKfycbz_8nxxhe_UEO-Pgy54s29Ar7ZIqWCYM_K8pngDiJjWx_C5lcrPb3LmgUAyfJebrEBl/exec" 
+    # URL Rasmi Apps Script DB_sbleisure yang baru dikemaskini
+    apps_script_url = "https://script.google.com/macros/s/AKfycbyvSzjcJblEzJNGMSqxVCwwoCMJts32fVB6Q6MnFV-Cqm8mgZIqIMxV5weJSPDwB1pf3g/exec" 
     payload = {
         "timestamp": datetime.now().isoformat(),
         "client": client_name,
@@ -41,7 +41,7 @@ def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
         logging.info(f"DEBUG SHEET SYNC: Status {response.status_code} - {response.text}")
     except Exception as e:
         print(f"DEBUG SHEET ERROR: {e}")
-        logging.error(f"Ralat hantar ke Google Sheet pusat: {e}")
+        logging.error(f"Ralat hantar ke Google Sheet DB_sbleisure: {e}")
 
 @app.route("/", methods=["GET"])
 def index():
@@ -51,11 +51,11 @@ def index():
         "version": "2.10"
     }), 200
 
-# Laluan ujian manual untuk mengesahkan fungsi sinkronisasi ke Google Sheet
+# Laluan ujian manual untuk mengesahkan fungsi sinkronisasi ke Google Sheet baru
 @app.route("/test-sheet", methods=["GET"])
 def test_sheet_sync():
-    push_chat_to_sheets("sbltransport", "+60132434200", "customer", "Ujian manual sinkronisasi sheet")
-    return jsonify({"status": "sent test data to sheet"}), 200
+    push_chat_to_sheets("sbltransport", "+60132434200", "customer", "Ujian manual sinkronisasi DB_sbleisure")
+    return jsonify({"status": "sent test data to DB_sbleisure sheet"}), 200
 
 @app.route("/api/clients", methods=["GET"])
 def get_clients_data():
@@ -215,7 +215,6 @@ def whatsapp_webhook():
             
         value = changes[0].get("value", {})
         
-        # Tapis dan abaikan status kemas kini (read, sent, delivered) dari Meta
         if "statuses" in value and "messages" not in value:
             return jsonify({"status": "ignored_status_update"}), 200
 
