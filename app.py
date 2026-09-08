@@ -202,7 +202,6 @@ def verify_whatsapp_webhook():
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     data = request.json or {}
-    logging.info(f"Mesej diterima: {data}")
 
     try:
         entry = data.get("entry", [])
@@ -214,8 +213,12 @@ def whatsapp_webhook():
             return jsonify({"status": "ignored"}), 200
             
         value = changes[0].get("value", {})
-        messages = value.get("messages", [])
         
+        # Tapis dan abaikan status kemas kini (read, sent, delivered) dari Meta
+        if "statuses" in value and "messages" not in value:
+            return jsonify({"status": "ignored_status_update"}), 200
+
+        messages = value.get("messages", [])
         if not messages:
             return jsonify({"status": "ignored", "reason": "no messages array"}), 200
 
