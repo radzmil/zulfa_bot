@@ -17,7 +17,7 @@ import sop_payment
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
-CORS(app)  # Membenarkan portal di Vercel berhubung secara bebas
+CORS(app)  # Membenarkan portal di Vercel berhubung secara bebas tanpa sekatan CORS
 
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
@@ -97,7 +97,6 @@ def get_leads_portal():
                 "status": "Aktif 🟢" if chat.get("mode") == "ai" else "Human Touch ⚡"
             })
         
-        # Fallback jika senarai kosong supaya portal tetap ada data prospek lalai
         if not leads_summary:
             leads_summary = [
                 {"phone": "601123687357", "name": "Zulfa Sementara", "status": "Aktif 🟢"}
@@ -119,18 +118,7 @@ def get_chat_history_portal():
             if db_phone == clean_target:
                 return jsonify(chat.get("messages", [])), 200
                 
-        # Fallback mesej sejarah sebenar jika telefon sepadan
-        fallback_history = [
-            {"sender": "user", "name": "Prospek", "time": "9:42 PM", "text": "hi"},
-            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:42 PM", "text": "Hai bos! Nak sewa bas untuk one-way atau two-way?"},
-            {"sender": "user", "name": "Prospek", "time": "9:43 PM", "text": "assalamualaikum...."},
-            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:43 PM", "text": "Waalaikumussalam bos! Nak sewa bas untuk one-way (sehala) atau two-way (pergi balik)?"},
-            {"sender": "user", "name": "Prospek", "time": "9:47 PM", "text": "hallalalalaoooaacaa"},
-            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:47 PM", "text": "Hahaha hai bos! Ceria betul malam ni. Nak sewa bas one-way ni? Boleh Zulfa uruskan untuk trip mana tu?"},
-            {"sender": "user", "name": "Prospek", "time": "9:50 PM", "text": "coooòaaaaaaaaaa"},
-            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:50 PM", "text": "Hehehe mencuba nampaknya bos! 🥳 Test line nampak.\n\nNak sewa bas untuk one-way ni sebenarnya? Cuba cite sikit nak pergi mana?"}
-        ]
-        return jsonify(fallback_history), 200
+        return jsonify([], 200)
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -160,7 +148,12 @@ def send_whatsapp_portal():
             chats = load_json_db(CHAT_LOGS_FILE)
             for chat in chats:
                 if str(chat.get("phone", "")).replace("+", "") == clean_phone:
-                    chat.setdefault('messages', []).append({"sender": "human", "name": "Anda", "text": message, "time": datetime.now().strftime('%I:%M %p')})
+                    chat.setdefault('messages', []).append({
+                        "sender": "human", 
+                        "name": "Anda", 
+                        "text": message, 
+                        "time": datetime.now().strftime('%I:%M %p')
+                    })
                     chat['lastMessage'] = message
                     break
             save_json_db(CHAT_LOGS_FILE, chats)
@@ -227,6 +220,7 @@ def whatsapp_webhook():
             message_text = "[Gambar / Resit Dihantar]"
 
         message_lower = message_text.lower()
+        waktu_sebenar = datetime.now().strftime('%I:%M %p')
         
         sbl_chats = load_json_db(CHAT_LOGS_FILE)
         
@@ -245,14 +239,19 @@ def whatsapp_webhook():
                     "customerName": f"Pelanggan ({sender_phone})",
                     "phone": f"+{sender_phone}",
                     "lastMessage": message_text,
-                    "time": datetime.now().strftime('%I:%M %p'),
+                    "time": waktu_sebenar,
                     "mode": "ai",
                     "messages": []
                 }
                 sbl_chats.append(found_chat)
 
         if found_chat:
-            found_chat.setdefault('messages', []).append({"sender": "user", "name": found_chat.get("customerName", "Prospek"), "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
+            found_chat.setdefault('messages', []).append({
+                "sender": "user", 
+                "name": found_chat.get("customerName", "Prospek"), 
+                "text": message_text, 
+                "time": waktu_sebenar
+            })
             found_chat['lastMessage'] = message_text
             current_chat_mode = found_chat.get("mode", "ai")
         else:
@@ -316,8 +315,14 @@ def whatsapp_webhook():
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
             
+            waktu_balasan_ai = datetime.now().strftime('%I:%M %p')
             if found_chat:
-                found_chat.setdefault('messages', []).append({"sender": "bot", "name": "Zulfa (Bot)", "text": jawapan_ai, "time": datetime.now().strftime('%I:%M %p')})
+                found_chat.setdefault('messages', []).append({
+                    "sender": "bot", 
+                    "name": "Zulfa (Bot)", 
+                    "text": jawapan_ai, 
+                    "time": waktu_balasan_ai
+                })
                 found_chat['lastMessage'] = jawapan_ai
                 save_json_db(CHAT_LOGS_FILE, sbl_chats)
 
@@ -364,7 +369,8 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     }
     payload = {
         "messaging_product": "whatsapp",
-        "to": "image",
+        "to": clean_phone,
+        "type": "image",
         "image": {
             "link": image_url,
             "caption": caption
