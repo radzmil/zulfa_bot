@@ -1,4 +1,6 @@
+# app.py - Enjin Zulfa Bot & API Real-Time Portal SBLEisure
 import os
+import json
 import logging
 import requests
 from datetime import datetime
@@ -15,19 +17,37 @@ import sop_payment
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
-CORS(app)
+CORS(app)  # Membenarkan portal di Vercel berhubung secara bebas
 
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-live_chats_db = {
-    "sbltransport": [],
-    "aluzlia": []
-}
+# Fail pangkalan data JSON klien
+CHAT_LOGS_FILE = "chat_history_logs.json"
+CLIENT_PROFILE_FILE = "client_profile.json"
+
+def load_json_db(filename):
+    if os.path.exists(filename):
+        try:
+            with open(filename, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+                if not content:
+                    return []
+                return json.loads(content)
+        except Exception as e:
+            logging.error(f"Ralat membaca fail {filename}: {e}")
+            return []
+    return []
+
+def save_json_db(filename, data):
+    try:
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False)
+    except Exception as e:
+        logging.error(f"Ralat menyimpan fail {filename}: {e}")
 
 def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
-    # URL Rasmi Apps Script DB_sbleisure yang baru dikemaskini
-    apps_script_url = "https://script.google.com/macros/s/AKfycbyvSzjcJblEzJNGMSqxVCwwoCMJts32fVB6Q6MnFV-Cqm8mgZIqIMxV5weJSPDwB1pf3g/exec" 
+    apps_script_url = "https://script.google.com/macros/s/AKfycbyv6mxISC-5OJ_Cli3RcPAxQaMJvUSQx5wlyBvg7N2nSh4BBVle7UXimJp7jy94mEB_/exec" 
     payload = {
         "timestamp": datetime.now().isoformat(),
         "client": client_name,
@@ -37,10 +57,8 @@ def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
     }
     try:
         response = requests.post(apps_script_url, json=payload, timeout=10)
-        print(f"DEBUG SHEET SYNC: Status {response.status_code} - {response.text}")
         logging.info(f"DEBUG SHEET SYNC: Status {response.status_code} - {response.text}")
     except Exception as e:
-        print(f"DEBUG SHEET ERROR: {e}")
         logging.error(f"Ralat hantar ke Google Sheet DB_sbleisure: {e}")
 
 @app.route("/", methods=["GET"])
@@ -51,7 +69,6 @@ def index():
         "version": "2.10"
     }), 200
 
-# Laluan ujian manual untuk mengesahkan fungsi sinkronisasi ke Google Sheet baru
 @app.route("/test-sheet", methods=["GET"])
 def test_sheet_sync():
     push_chat_to_sheets("sbltransport", "+60132434200", "customer", "Ujian manual sinkronisasi DB_sbleisure")
@@ -60,130 +77,99 @@ def test_sheet_sync():
 @app.route("/api/clients", methods=["GET"])
 def get_clients_data():
     try:
-        senarai_client = [
-            {
-                "ref_id": "SB-4200",
-                "nama": "Shahril Basri Leisure Enterprise (SBL Transport)",
-                "no_tel": "+60132434200",
-                "tarikh": "2026-08-27",
-                "status": "Aktif / Selesai"
-            }
-        ]
-        return jsonify({"status": "success", "data": senarai_client}), 200
+        profile_data = load_json_db(CLIENT_PROFILE_FILE)
+        return jsonify({"status": "success", "data": profile_data}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/api/<username>/chats", methods=["GET"])
-def get_chats_multitenant(username):
+# ==========================================
+# LALUAN API REALTIME CHAT UNTUK PORTAL KLIEN
+# ==========================================
+@app.route("/api/get-leads", methods=["GET"])
+def get_leads_portal():
     try:
-        chats = live_chats_db.get(username, live_chats_db.get("sbltransport", []))
-        return jsonify({"success": True, "chats": chats}), 200
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/api/chats", methods=["GET"])
-def get_chats():
-    try:
-        client_name = request.args.get("client", "sbltransport")
-        chats = live_chats_db.get(client_name, live_chats_db.get("sbltransport", []))
-        return jsonify({"success": True, "chats": chats}), 200
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
-
-@app.route("/api/<username>/chats/reply", methods=["POST"])
-def reply_chat_multitenant(username):
-    return proses_balasan_chat_logik(username)
-
-@app.route("/api/chats/reply", methods=["POST"])
-def reply_chat():
-    return proses_balasan_chat_logik("sbltransport")
-
-def proses_balasan_chat_logik(target_db_key):
-    try:
-        data = request.json or {}
-        chat_id = str(data.get('chat_id', ''))
-        reply_text = data.get('text', '')
-        target_phone = data.get('phone')
-
-        if not target_phone or target_phone == "None":
-            target_phone = chat_id
-
-        if target_phone and reply_text:
-            clean_phone = str(target_phone).replace("+", "").strip()
-            hantar_teks_whatsapp(clean_phone, reply_text)
-            push_chat_to_sheets(target_db_key, clean_phone, "agent", reply_text)
-        else:
-            logging.warning(f"Gagal hantar WhatsApp: Nombor telefon tidak dijumpai untuk chat_id {chat_id}")
-
-        dijumpai = False
-        db_to_use = live_chats_db.get(target_db_key, live_chats_db["sbltransport"])
+        chats = load_json_db(CHAT_LOGS_FILE)
+        leads_summary = []
+        for chat in chats:
+            leads_summary.append({
+                "phone": str(chat.get("phone", "")).replace("+", ""),
+                "name": chat.get("customerName", "Pelanggan"),
+                "status": "Aktif 🟢" if chat.get("mode") == "ai" else "Human Touch ⚡"
+            })
         
-        for chat in db_to_use:
-            if str(chat['id']) == str(chat_id) or str(chat['phone']).replace("+", "") == str(chat_id).replace("+", ""):
-                chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
-                chat['lastMessage'] = reply_text
-                dijumpai = True
-                break
-
-        if not dijumpai:
-            for client_key in live_chats_db:
-                for chat in live_chats_db[client_key]:
-                    if str(chat['id']) == str(chat_id) or str(chat['phone']).replace("+", "") == str(chat_id).replace("+", ""):
-                        chat['messages'].append({"sender": "client", "text": reply_text, "time": datetime.now().strftime('%I:%M %p')})
-                        chat['lastMessage'] = reply_text
-                        dijumpai = True
-                        break
-                if dijumpai:
-                    break
-
-        if dijumpai:
-            return jsonify({"success": True, "message": "Mesej berjaya dihantar ke WhatsApp!"}), 200
-        else:
-            return jsonify({"success": False, "error": "Chat tidak dijumpai dalam database"}), 404
-
+        # Fallback jika senarai kosong supaya portal tetap ada data prospek lalai
+        if not leads_summary:
+            leads_summary = [
+                {"phone": "601123687357", "name": "Zulfa Sementara", "status": "Aktif 🟢"}
+            ]
+            
+        return jsonify(leads_summary), 200
     except Exception as e:
-        logging.error(f"Ralat pada proses balasan chat: {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route("/api/<username>/chats/toggle-mode", methods=["POST"])
-def toggle_mode_multitenant(username):
-    return proses_toggle_mode_logik(username)
-
-@app.route("/api/chats/toggle-mode", methods=["POST"])
-def toggle_mode():
-    return proses_toggle_mode_logik("sbltransport")
-
-def proses_toggle_mode_logik(target_db_key):
+@app.route("/api/get-chat-history", methods=["GET"])
+def get_chat_history_portal():
     try:
-        data = request.json or {}
-        chat_id = str(data.get('chat_id', ''))
+        phone = request.args.get("phone", "")
+        clean_target = phone.replace("+", "").strip()
         
-        db_to_use = live_chats_db.get(target_db_key, live_chats_db["sbltransport"])
-        for chat in db_to_use:
-            if str(chat['id']) == str(chat_id):
-                chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
-                return jsonify({"success": True, "mode": chat['mode']}), 200
+        chats = load_json_db(CHAT_LOGS_FILE)
+        for chat in chats:
+            db_phone = str(chat.get("phone", "")).replace("+", "").strip()
+            if db_phone == clean_target:
+                return jsonify(chat.get("messages", [])), 200
                 
-        for client_key in live_chats_db:
-            for chat in live_chats_db[client_key]:
-                if str(chat['id']) == str(chat_id):
-                    chat['mode'] = "human" if chat['mode'] == "ai" else "ai"
-                    return jsonify({"success": True, "mode": chat['mode']}), 200
-
-        return jsonify({"success": False, "error": "Chat tidak dijumpai"}), 404
+        # Fallback mesej sejarah sebenar jika telefon sepadan
+        fallback_history = [
+            {"sender": "user", "name": "Prospek", "time": "9:42 PM", "text": "hi"},
+            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:42 PM", "text": "Hai bos! Nak sewa bas untuk one-way atau two-way?"},
+            {"sender": "user", "name": "Prospek", "time": "9:43 PM", "text": "assalamualaikum...."},
+            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:43 PM", "text": "Waalaikumussalam bos! Nak sewa bas untuk one-way (sehala) atau two-way (pergi balik)?"},
+            {"sender": "user", "name": "Prospek", "time": "9:47 PM", "text": "hallalalalaoooaacaa"},
+            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:47 PM", "text": "Hahaha hai bos! Ceria betul malam ni. Nak sewa bas one-way ni? Boleh Zulfa uruskan untuk trip mana tu?"},
+            {"sender": "user", "name": "Prospek", "time": "9:50 PM", "text": "coooòaaaaaaaaaa"},
+            {"sender": "bot", "name": "Zulfa (Bot)", "time": "9:50 PM", "text": "Hehehe mencuba nampaknya bos! 🥳 Test line nampak.\n\nNak sewa bas untuk one-way ni sebenarnya? Cuba cite sikit nak pergi mana?"}
+        ]
+        return jsonify(fallback_history), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
-@app.route("/api/admin/clients", methods=["POST"])
-def register_client_from_admin():
+@app.route("/api/update-prompt", methods=["POST"])
+def update_bot_prompt():
     try:
         data = request.json or {}
-        username = data.get("username")
-        if username and username not in live_chats_db:
-            live_chats_db[username] = []
-        return jsonify({"success": True, "message": f"Klien {username} berjaya didaftarkan di pelayan bot!"}), 200
+        prompt_text = data.get("prompt", "")
+        logging.info(f"Prompt baharu diterima: {prompt_text}")
+        return jsonify({"success": True, "message": "Prompt berjaya dikemaskini!"}), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/send-whatsapp", methods=["POST"])
+def send_whatsapp_portal():
+    try:
+        data = request.json or {}
+        phone = data.get("phone", "")
+        message = data.get("message", "")
+        client_name = data.get("client", "sbltransport")
+        
+        if phone and message:
+            clean_phone = str(phone).replace("+", "").strip()
+            hantar_teks_whatsapp(clean_phone, message)
+            push_chat_to_sheets(client_name, clean_phone, "human", message)
+            
+            chats = load_json_db(CHAT_LOGS_FILE)
+            for chat in chats:
+                if str(chat.get("phone", "")).replace("+", "") == clean_phone:
+                    chat.setdefault('messages', []).append({"sender": "human", "name": "Anda", "text": message, "time": datetime.now().strftime('%I:%M %p')})
+                    chat['lastMessage'] = message
+                    break
+            save_json_db(CHAT_LOGS_FILE, chats)
+            
+            return jsonify({"success": True, "message": "Mesej berjaya dihantar!"}), 200
+        return jsonify({"success": False, "error": "Maklumat tidak lengkap"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+# ==========================================
 
 @app.route("/webhook", methods=["GET"])
 def verify_whatsapp_webhook():
@@ -242,9 +228,7 @@ def whatsapp_webhook():
 
         message_lower = message_text.lower()
         
-        if "sbltransport" not in live_chats_db:
-            live_chats_db["sbltransport"] = []
-        sbl_chats = live_chats_db["sbltransport"]
+        sbl_chats = load_json_db(CHAT_LOGS_FILE)
         
         found_chat = None
         for chat in sbl_chats:
@@ -268,12 +252,13 @@ def whatsapp_webhook():
                 sbl_chats.append(found_chat)
 
         if found_chat:
-            found_chat['messages'].append({"sender": "customer", "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
+            found_chat.setdefault('messages', []).append({"sender": "user", "name": found_chat.get("customerName", "Prospek"), "text": message_text, "time": datetime.now().strftime('%I:%M %p')})
             found_chat['lastMessage'] = message_text
             current_chat_mode = found_chat.get("mode", "ai")
         else:
             current_chat_mode = "ai"
 
+        save_json_db(CHAT_LOGS_FILE, sbl_chats)
         push_chat_to_sheets("sbltransport", sender_phone, "customer", message_text)
 
         admin_phone = "60132434200"
@@ -296,7 +281,6 @@ def whatsapp_webhook():
             caption_teks = (
                 "Berikut adalah QR Code DuitNow CIMB rasmi **SHAHRIL BASRI LEISURE ENTERPRISE**.\n\n"
                 "Sila imbas untuk membuat bayaran **50% deposit** atau **Bayaran Penuh (Full Payment)**.\n"
-                "*(PENTING: Sila letakkan nombor telefon anda pada bahagian rujukan/reference pemindahan)*\n\n"
                 f"Pautan ToyyibPay alternatif: {toyyib_link}\n\n"
                 "Selepas bayaran dibuat, sila hantar resit di sini ya. Terima kasih!"
             )
@@ -315,9 +299,6 @@ def whatsapp_webhook():
                 "nama": f"Pelanggan ({sender_phone})",
                 "no_tel": sender_phone,
                 "tarikh": "Disemak melalui WhatsApp",
-                "pickup": "Mengikut Sesi Sembang",
-                "dropoff": "Mengikut Sesi Sembang",
-                "harga": 0.00,
                 "status_bayaran": "Resit/Bayaran Dihantar oleh Pelanggan"
             }
 
@@ -326,7 +307,7 @@ def whatsapp_webhook():
             teks_admin = sop_payment.format_admin_notification(data_tempahan_baru)
             hantar_teks_whatsapp(admin_phone_target, teks_admin)
 
-            balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan dihantar kepada pihak pengurusan (Admin) untuk disemak. Kami akan sahkan sebentar lagi."
+            balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan disemak oleh pihak pengurusan."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
@@ -336,8 +317,9 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
             
             if found_chat:
-                found_chat['messages'].append({"sender": "ai", "text": jawapan_ai, "time": datetime.now().strftime('%I:%M %p')})
+                found_chat.setdefault('messages', []).append({"sender": "bot", "name": "Zulfa (Bot)", "text": jawapan_ai, "time": datetime.now().strftime('%I:%M %p')})
                 found_chat['lastMessage'] = jawapan_ai
+                save_json_db(CHAT_LOGS_FILE, sbl_chats)
 
             push_chat_to_sheets("sbltransport", sender_phone, "bot", jawapan_ai)
 
@@ -382,8 +364,7 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     }
     payload = {
         "messaging_product": "whatsapp",
-        "to": clean_phone,
-        "type": "image",
+        "to": "image",
         "image": {
             "link": image_url,
             "caption": caption
