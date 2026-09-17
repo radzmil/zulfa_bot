@@ -154,6 +154,49 @@ def update_bot_prompt():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
+@app.route("/api/update-client-profile", methods=["POST"])
+def update_client_profile():
+    try:
+        data = request.json or {}
+        username = data.get("username", "")
+        bot_name = data.get("bot_name", "")
+        admin_number = data.get("admin_number", "")
+        fb_link = data.get("fb_link", "")
+        ig_link = data.get("ig_link", "")
+        tiktok_link = data.get("tiktok_link", "")
+        logo_base64 = data.get("logo_base64", "")
+        
+        profiles = load_json_db(CLIENT_PROFILE_FILE)
+        found = False
+        
+        for profile in profiles:
+            if profile.get("username") == username:
+                if bot_name: profile["bot_name"] = bot_name
+                if admin_number: profile["admin_number"] = admin_number
+                profile["fb_link"] = fb_link
+                profile["ig_link"] = ig_link
+                profile["tiktok_link"] = tiktok_link
+                if logo_base64:
+                    profile["logo"] = logo_base64
+                found = True
+                break
+                
+        if not found:
+            profiles.append({
+                "username": username,
+                "bot_name": bot_name or f"bot-{username}",
+                "admin_number": admin_number,
+                "fb_link": fb_link,
+                "ig_link": ig_link,
+                "tiktok_link": tiktok_link,
+                "logo": logo_base64
+            })
+            
+        save_json_db(CLIENT_PROFILE_FILE, profiles)
+        return jsonify({"success": True, "message": "Profil klien berjaya disimpan secara kekal!"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 @app.route("/api/send-whatsapp", methods=["POST"])
 def send_whatsapp_portal():
     try:
