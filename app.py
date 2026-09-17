@@ -83,7 +83,7 @@ def get_clients_data():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # ==========================================
-# LALUAN API REALTIME CHAT UNTUK PORTAL KLIEN
+# LALUAN API REALTIME CHAT & ANALITIK PORTAL
 # ==========================================
 @app.route("/api/get-leads", methods=["GET"])
 def get_leads_portal():
@@ -119,6 +119,24 @@ def get_chat_history_portal():
                 return jsonify(chat.get("messages", [])), 200
                 
         return jsonify([], 200)
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/get-analytics", methods=["GET"])
+def get_analytics_portal():
+    try:
+        chats = load_json_db(CHAT_LOGS_FILE)
+        total_messages = sum(len(c.get("messages", [])) for c in chats)
+        total_leads = len(chats)
+        human_interventions = sum(1 for c in chats if c.get("mode") == "human")
+        
+        return jsonify({
+            "daily_chats": total_messages if total_messages > 0 else 0,
+            "weekly_chats": total_messages * 7 if total_messages > 0 else 0,
+            "monthly_chats": total_messages * 30 if total_messages > 0 else 0,
+            "total_leads": total_leads if total_leads > 0 else 0,
+            "human_interventions": human_interventions
+        }), 200
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
