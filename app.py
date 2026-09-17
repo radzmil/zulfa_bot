@@ -1,9 +1,9 @@
-# app.py - Enjin Zulfa Bot & API Real-Time Portal SBLEisure
+# app.py - Enjin Zulfa Bot & API Real-Time Portal SBLEisure (Zon Masa Malaysia UTC+8)
 import os
 import json
 import logging
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -25,6 +25,10 @@ KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukt
 # Fail pangkalan data JSON klien
 CHAT_LOGS_FILE = "chat_history_logs.json"
 CLIENT_PROFILE_FILE = "client_profile.json"
+
+def get_malaysia_time():
+    # Menyelaraskan masa pelayan UTC kepada zon masa Malaysia (UTC +8)
+    return datetime.utcnow() + timedelta(hours=8)
 
 def load_json_db(filename):
     if os.path.exists(filename):
@@ -49,7 +53,7 @@ def save_json_db(filename, data):
 def push_chat_to_sheets(client_name, phone_number, sender_type, message_text):
     apps_script_url = "https://script.google.com/macros/s/AKfycbyv6mxISC-5OJ_Cli3RcPAxQaMJvUSQx5wlyBvg7N2nSh4BBVle7UXimJp7jy94mEB_/exec" 
     payload = {
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": get_malaysia_time().isoformat(),
         "client": client_name,
         "phone": phone_number,
         "sender": sender_type,
@@ -163,6 +167,7 @@ def send_whatsapp_portal():
             hantar_teks_whatsapp(clean_phone, message)
             push_chat_to_sheets(client_name, clean_phone, "human", message)
             
+            waktu_malaysia_str = get_malaysia_time().strftime('%I:%M %p')
             chats = load_json_db(CHAT_LOGS_FILE)
             for chat in chats:
                 if str(chat.get("phone", "")).replace("+", "") == clean_phone:
@@ -170,7 +175,7 @@ def send_whatsapp_portal():
                         "sender": "human", 
                         "name": "Anda", 
                         "text": message, 
-                        "time": datetime.now().strftime('%I:%M %p')
+                        "time": waktu_malaysia_str
                     })
                     chat['lastMessage'] = message
                     break
@@ -238,7 +243,7 @@ def whatsapp_webhook():
             message_text = "[Gambar / Resit Dihantar]"
 
         message_lower = message_text.lower()
-        waktu_sebenar = datetime.now().strftime('%I:%M %p')
+        waktu_sebenar = get_malaysia_time().strftime('%I:%M %p')
         
         sbl_chats = load_json_db(CHAT_LOGS_FILE)
         
@@ -282,7 +287,7 @@ def whatsapp_webhook():
         if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
             nota_baru = message_text.replace("#nota", "").replace("#NOTA", "").replace("#ingat", "").replace("#INGAT", "").strip()
             with open("admin_memory.txt", "a", encoding="utf-8") as f:
-                f.write(f"- [{datetime.now().strftime('%Y-%m-%d %H:%M')}] {nota_baru}\n")
+                f.write(f"- [{get_malaysia_time().strftime('%Y-%m-%d %H:%M')}] {nota_baru}\n")
             
             teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
@@ -333,7 +338,7 @@ def whatsapp_webhook():
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
             
-            waktu_balasan_ai = datetime.now().strftime('%I:%M %p')
+            waktu_balasan_ai = get_malaysia_time().strftime('%I:%M %p')
             if found_chat:
                 found_chat.setdefault('messages', []).append({
                     "sender": "bot", 
