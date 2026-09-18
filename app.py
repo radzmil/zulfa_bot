@@ -102,7 +102,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.12"
+        "version": "2.13"
     }), 200
 
 @app.route("/test-sheet", methods=["GET"])
@@ -242,8 +242,8 @@ def send_whatsapp_portal():
             hantar_teks_whatsapp(clean_phone, message)
             push_chat_to_sheets(client_name, clean_phone, "human", message)
             
-            # Simpan ke PostgreSQL (ID Klien 1 untuk sbltransport)
-            save_message_to_postgres(1, "Admin", message)
+            # Simpan ke PostgreSQL (ID Klien 6 untuk sbltransport)
+            save_message_to_postgres(6, "Admin", message)
             
             waktu_malaysia_str = get_malaysia_time().strftime('%I:%M %p')
             chats = load_json_db(CHAT_LOGS_FILE)
@@ -264,6 +264,36 @@ def send_whatsapp_portal():
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 # ==========================================
+
+@app.route("/api/client/messages/<int:client_id>", methods=["GET"])
+def get_client_messages_supabase(client_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([]), 200
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT sender, message, timestamp 
+            FROM messages 
+            WHERE client_id = %s 
+            ORDER BY timestamp DESC;
+        """, (client_id,))
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        messages_list = []
+        for row in rows:
+            messages_list.append({
+                "sender": row['sender'],
+                "message": row['message'],
+                "timestamp": row['timestamp'].strftime('%Y-%m-%d %H:%M:%S') if row['timestamp'] else ''
+            })
+            
+        return jsonify(messages_list), 200
+    except Exception as e:
+        logging.error(f"Ralat API client messages PostgreSQL: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/webhook", methods=["GET"])
 def verify_whatsapp_webhook():
@@ -320,8 +350,8 @@ def whatsapp_webhook():
         elif msg_type == "image":
             message_text = "[Gambar / Resit Dihantar]"
 
-        # Simpan mesej masuk pelanggan ke DB utama (ID Klien 1: sbltransport)
-        save_message_to_postgres(1, f"+{sender_phone}", message_text)
+        # Simpan mesej masuk pelanggan ke DB utama (ID Klien 6 untuk sbltransport)
+        save_message_to_postgres(6, f"+{sender_phone}", message_text)
 
         message_lower = message_text.lower()
         waktu_sebenar = get_malaysia_time().strftime('%I:%M %p')
@@ -372,7 +402,7 @@ def whatsapp_webhook():
             
             teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
-            save_message_to_postgres(1, "Zulfa (Bot)", teks_balasan_admin)
+            save_message_to_postgres(6, "Zulfa (Bot)", teks_balasan_admin)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
@@ -394,7 +424,7 @@ def whatsapp_webhook():
             else:
                 hantar_teks_whatsapp(sender_phone, caption_teks)
             
-            save_message_to_postgres(1, "Zulfa (Bot)", caption_teks)
+            save_message_to_postgres(6, "Zulfa (Bot)", caption_teks)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
@@ -414,7 +444,7 @@ def whatsapp_webhook():
 
             balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan disemak oleh pihak pengurusan."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
-            save_message_to_postgres(1, "Zulfa (Bot)", balasan_pelanggan)
+            save_message_to_postgres(6, "Zulfa (Bot)", balasan_pelanggan)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
@@ -423,7 +453,7 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
             
             # Simpan jawapan bot ke DB utama
-            save_message_to_postgres(1, "Zulfa (Bot)", jawapan_ai)
+            save_message_to_postgres(6, "Zulfa (Bot)", jawapan_ai)
             
             waktu_balasan_ai = get_malaysia_time().strftime('%I:%M %p')
             if found_chat:
