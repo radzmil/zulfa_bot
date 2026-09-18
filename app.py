@@ -3,6 +3,8 @@ import os
 import json
 import logging
 import requests
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -17,7 +19,7 @@ import sop_payment
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 app = Flask(__name__)
-CORS(app)  # Membenarkan portal di Vercel berhubung secara bebas tanpa sekatan CORS
+CORS(app)  # Membenarkan portal berhubung secara bebas tanpa sekatan CORS
 
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
@@ -25,6 +27,45 @@ KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukt
 # Fail pangkalan data JSON klien
 CHAT_LOGS_FILE = "chat_history_logs.json"
 CLIENT_PROFILE_FILE = "client_profile.json"
+
+# Konfigurasi Pangkalan Data PostgreSQL (Supabase / Railway DB)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_db_connection():
+    if not DATABASE_URL:
+        return None
+    try:
+        conn = psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        return conn
+    except Exception as e:
+        logging.error(f"Ralat menyambung ke pangkalan data PostgreSQL: {e}")
+        return None
+
+def save_message_to_postgres(client_id, sender_name, message_text):
+    """Fungsi merekodkan mesej WhatsApp terus ke jadual messages dalam DB utama"""
+    conn = get_db_connection()
+    if not conn:
+        return
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS messages (
+                id SERIAL PRIMARY KEY,
+                client_id INTEGER,
+                sender VARCHAR(100),
+                message TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        """)
+        cursor.execute("""
+            INSERT INTO messages (client_id, sender, message)
+            VALUES (%s, %s, %s);
+        """, (client_id, sender_name, message_text))
+        conn.commit()
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        logging.error(f"Ralat simpan mesej ke PostgreSQL: {e}")
 
 def get_malaysia_time():
     # Menyelaraskan masa pelayan UTC kepada zon masa Malaysia (UTC +8)
@@ -70,7 +111,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.10"
+        "version": "2.11"
     }), 200
 
 @app.route("/test-sheet", methods=["GET"])
@@ -210,6 +251,9 @@ def send_whatsapp_portal():
             hantar_teks_whatsapp(clean_phone, message)
             push_chat_to_sheets(client_name, clean_phone, "human", message)
             
+            # Simpan ke PostgreSQL (ID Klien 1 untuk sbltransport)
+            save_message_to_postgres(1, "Admin", message)
+            
             waktu_malaysia_str = get_malaysia_time().strftime('%I:%M %p')
             chats = load_json_db(CHAT_LOGS_FILE)
             for chat in chats:
@@ -285,6 +329,9 @@ def whatsapp_webhook():
         elif msg_type == "image":
             message_text = "[Gambar / Resit Dihantar]"
 
+        # Simpan mesej masuk pelanggan ke DB utama (ID Klien 1: sbltransport)
+        save_message_to_postgres(1, f"+{sender_phone}", message_text)
+
         message_lower = message_text.lower()
         waktu_sebenar = get_malaysia_time().strftime('%I:%M %p')
         
@@ -334,6 +381,7 @@ def whatsapp_webhook():
             
             teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
+            save_message_to_postgres(1, "Zulfa (Bot)", teks_balasan_admin)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
@@ -355,6 +403,7 @@ def whatsapp_webhook():
             else:
                 hantar_teks_whatsapp(sender_phone, caption_teks)
             
+            save_message_to_postgres(1, "Zulfa (Bot)", caption_teks)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
@@ -374,12 +423,16 @@ def whatsapp_webhook():
 
             balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan disemak oleh pihak pengurusan."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
+            save_message_to_postgres(1, "Zulfa (Bot)", balasan_pelanggan)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
         if message_text and message_text != "[Gambar / Resit Dihantar]":
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
+            
+            # Simpan jawapan bot ke DB utama
+            save_message_to_postgres(1, "Zulfa (Bot)", jawapan_ai)
             
             waktu_balasan_ai = get_malaysia_time().strftime('%I:%M %p')
             if found_chat:
