@@ -42,21 +42,12 @@ def get_db_connection():
         return None
 
 def save_message_to_postgres(client_id, sender_name, message_text):
-    """Fungsi merekodkan mesej WhatsApp terus ke jadual messages dalam DB utama"""
+    """Fungsi selamat merekodkan mesej WhatsApp terus ke jadual messages"""
     conn = get_db_connection()
     if not conn:
         return
     try:
         cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS messages (
-                id SERIAL PRIMARY KEY,
-                client_id INTEGER,
-                sender VARCHAR(100),
-                message TEXT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
         cursor.execute("""
             INSERT INTO messages (client_id, sender, message)
             VALUES (%s, %s, %s);
@@ -65,7 +56,7 @@ def save_message_to_postgres(client_id, sender_name, message_text):
         cursor.close()
         conn.close()
     except Exception as e:
-        logging.error(f"Ralat simpan mesej ke PostgreSQL: {e}")
+        logging.error(f"Ralat amaran simpan mesej ke PostgreSQL (diabaikan agar bot tidak terhenti): {e}")
 
 def get_malaysia_time():
     # Menyelaraskan masa pelayan UTC kepada zon masa Malaysia (UTC +8)
@@ -111,7 +102,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.11"
+        "version": "2.12"
     }), 200
 
 @app.route("/test-sheet", methods=["GET"])
