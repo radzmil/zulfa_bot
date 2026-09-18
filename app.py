@@ -42,15 +42,15 @@ def get_db_connection():
         return None
 
 def save_message_to_postgres(client_id, sender_name, message_text):
-    """Fungsi selamat merekodkan mesej WhatsApp terus ke jadual messages"""
+    """Fungsi selamat merekodkan mesej WhatsApp terus ke jadual messages bersama timestamp"""
     conn = get_db_connection()
     if not conn:
         return
     try:
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO messages (client_id, sender, message)
-            VALUES (%s, %s, %s);
+            INSERT INTO messages (client_id, sender, message, timestamp)
+            VALUES (%s, %s, %s, NOW());
         """, (client_id, sender_name, message_text))
         conn.commit()
         cursor.close()
