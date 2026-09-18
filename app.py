@@ -102,7 +102,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.13"
+        "version": "2.14"
     }), 200
 
 @app.route("/test-sheet", methods=["GET"])
@@ -406,6 +406,7 @@ def whatsapp_webhook():
             push_chat_to_sheets("sbltransport", sender_phone, "bot", teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
+        # Semakan Mod Human Touch / AI: Jika mod 'human', AI dibekukan dari membalas automatik
         if current_chat_mode == "human":
             logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
             return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
