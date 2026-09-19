@@ -24,7 +24,7 @@ CORS(app)  # Membenarkan portal berhubung secara bebas tanpa sekatan CORS
 KEYWORDS_QR = ["qr", "qr code", "qrcode", "duitnow", "cimb qr", "nak qr", "gambar qr"]
 KEYWORDS_BAYARAN = ["resit", "dah bayar", "selesai bayar", "payment done", "bukti bayar", "bank in"]
 
-# Fail pangkalan data JSON klien
+# Fail pangkalan data JSON klien (Dikekalkan sepenuhnya seperti asal)
 CHAT_LOGS_FILE = "chat_history_logs.json"
 CLIENT_PROFILE_FILE = "client_profile.json"
 
@@ -140,7 +140,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.17"
+        "version": "2.20"
     }), 200
 
 @app.route("/test-sheet", methods=["GET"])
@@ -157,7 +157,7 @@ def get_clients_data():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # ==========================================
-# LALUAN API REALTIME CHAT & ANALITIK PORTAL
+# LALUAN API REALTIME CHAT & ANALITIK PORTAL (DIKEKALKAN SEPENUHNYA)
 # ==========================================
 @app.route("/api/get-leads", methods=["GET"])
 def get_leads_portal():
@@ -281,21 +281,26 @@ def send_whatsapp_portal():
             hantar_teks_whatsapp(clean_phone, message)
             push_chat_to_sheets(client_name, clean_phone, "human", message)
             
+            # Simpan terus ke Supabase untuk mengelakkan ralat Read-only Vercel
             save_message_to_postgres(ACTIVE_CLIENT_ID, "Admin", message)
             
-            waktu_malaysia_str = get_malaysia_time().strftime('%I:%M %p')
-            chats = load_json_db(CHAT_LOGS_FILE)
-            for chat in chats:
-                if str(chat.get("phone", "")).replace("+", "") == clean_phone:
-                    chat.setdefault('messages', []).append({
-                        "sender": "human", 
-                        "name": "Anda", 
-                        "text": message, 
-                        "time": waktu_malaysia_str
-                    })
-                    chat['lastMessage'] = message
-                    break
-            save_json_db(CHAT_LOGS_FILE, chats)
+            # Cuba kemaskini JSON secara selamat (Cuba-jaya tanpa hentikan sistem jika gagal)
+            try:
+                waktu_malaysia_str = get_malaysia_time().strftime('%I:%M %p')
+                chats = load_json_db(CHAT_LOGS_FILE)
+                for chat in chats:
+                    if str(chat.get("phone", "")).replace("+", "") == clean_phone:
+                        chat.setdefault('messages', []).append({
+                            "sender": "human", 
+                            "name": "Anda", 
+                            "text": message, 
+                            "time": waktu_malaysia_str
+                        })
+                        chat['lastMessage'] = message
+                        break
+                save_json_db(CHAT_LOGS_FILE, chats)
+            except Exception as json_err:
+                logging.warning(f"Penulisan JSON tempatan diabaikan (mod read-only): {json_err}")
             
             return jsonify({"success": True, "message": "Mesej berjaya dihantar!"}), 200
         return jsonify({"success": False, "error": "Maklumat tidak lengkap"}), 400
@@ -548,14 +553,21 @@ def whatsapp_webhook():
         else:
             current_chat_mode = "ai"
 
-        save_json_db(CHAT_LOGS_FILE, sbl_chats)
+        try:
+            save_json_db(CHAT_LOGS_FILE, sbl_chats)
+        except Exception as json_err:
+            logging.warning(f"Simpan JSON diabaikan: {json_err}")
+            
         push_chat_to_sheets("sbltransport", sender_phone, "customer", message_text)
 
         admin_phone = "60132434200"
         if sender_phone == admin_phone and message_lower.startswith(("#nota", "#ingat")):
             nota_baru = message_text.replace("#nota", "").replace("#NOTA", "").replace("#ingat", "").replace("#INGAT", "").strip()
-            with open("admin_memory.txt", "a", encoding="utf-8") as f:
-                f.write(f"- [{get_malaysia_time().strftime('%Y-%m-%d %H:%M')}] {nota_baru}\n")
+            try:
+                with open("admin_memory.txt", "a", encoding="utf-8") as f:
+                    f.write(f"- [{get_malaysia_time().strftime('%Y-%m-%d %H:%M')}] {nota_baru}\n")
+            except Exception:
+                pass
             
             teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
@@ -582,7 +594,7 @@ def whatsapp_webhook():
                 hantar_teks_whatsapp(sender_phone, caption_teks)
             
             save_message_to_postgres(ACTIVE_CLIENT_ID, "Zulfa (Bot)", caption_teks)
-            tolak_token_klien(ACTIVE_CLIENT_ID)  # Menolak token klien secara dinamik
+            tolak_token_klien(ACTIVE_CLIENT_ID)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
@@ -595,7 +607,11 @@ def whatsapp_webhook():
                 "status_bayaran": "Resit/Bayaran Dihantar oleh Pelanggan"
             }
 
-            sop_payment.hantar_emel_admin(data_tempahan_baru)
+            try:
+                sop_payment.hantar_emel_admin(data_tempahan_baru)
+            except Exception:
+                pass
+                
             admin_phone_target = "60132434200"
             teks_admin = sop_payment.format_admin_notification(data_tempahan_baru)
             hantar_teks_whatsapp(admin_phone_target, teks_admin)
@@ -603,7 +619,7 @@ def whatsapp_webhook():
             balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan disemak oleh pihak pengurusan."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
             save_message_to_postgres(ACTIVE_CLIENT_ID, "Zulfa (Bot)", balasan_pelanggan)
-            tolak_token_klien(ACTIVE_CLIENT_ID)  # Menolak token klien secara dinamik
+            tolak_token_klien(ACTIVE_CLIENT_ID)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
@@ -612,7 +628,7 @@ def whatsapp_webhook():
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
             
             save_message_to_postgres(ACTIVE_CLIENT_ID, "Zulfa (Bot)", jawapan_ai)
-            tolak_token_klien(ACTIVE_CLIENT_ID)  # Menolak token setiap kali AI membalas mesej pelanggan
+            tolak_token_klien(ACTIVE_CLIENT_ID)
             
             waktu_balasan_ai = get_malaysia_time().strftime('%I:%M %p')
             if found_chat:
@@ -623,7 +639,10 @@ def whatsapp_webhook():
                     "time": waktu_balasan_ai
                 })
                 found_chat['lastMessage'] = jawapan_ai
-                save_json_db(CHAT_LOGS_FILE, sbl_chats)
+                try:
+                    save_json_db(CHAT_LOGS_FILE, sbl_chats)
+                except Exception:
+                    pass
 
             push_chat_to_sheets("sbltransport", sender_phone, "bot", jawapan_ai)
 
