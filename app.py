@@ -41,6 +41,25 @@ def get_db_connection():
         logging.error(f"Ralat menyambung ke pangkalan data PostgreSQL: {e}")
         return None
 
+def dapatkan_client_id_dari_token():
+    """Mencari ID klien secara dinamik berdasarkan BOT_TOKEN di fail .env yang sepadan dengan Admin Panel"""
+    bot_token_env = os.getenv("CLIENT_BOT_TOKEN", "bot_shahrilbasrileis_364c5e")
+    conn = get_db_connection()
+    if not conn:
+        return 6  # Fallback selamat
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM clients WHERE bot_token = %s;", (bot_token_env,))
+        res = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if res:
+            return res['id']
+        return 6
+    except Exception as e:
+        logging.error(f"Ralat cari client_id dari token: {e}")
+        return 6
+
 def save_message_to_postgres(client_id, sender_name, message_text):
     """Fungsi selamat merekodkan mesej WhatsApp terus ke jadual messages bersama timestamp"""
     conn = get_db_connection()
@@ -121,7 +140,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.16"
+        "version": "2.17"
     }), 200
 
 @app.route("/test-sheet", methods=["GET"])
@@ -255,13 +274,14 @@ def send_whatsapp_portal():
         phone = data.get("phone", "")
         message = data.get("message", "")
         client_name = data.get("client", "sbltransport")
+        ACTIVE_CLIENT_ID = dapatkan_client_id_dari_token()
         
         if phone and message:
             clean_phone = str(phone).replace("+", "").strip()
             hantar_teks_whatsapp(clean_phone, message)
             push_chat_to_sheets(client_name, clean_phone, "human", message)
             
-            save_message_to_postgres(6, "Admin", message)
+            save_message_to_postgres(ACTIVE_CLIENT_ID, "Admin", message)
             
             waktu_malaysia_str = get_malaysia_time().strftime('%I:%M %p')
             chats = load_json_db(CHAT_LOGS_FILE)
@@ -302,7 +322,6 @@ def get_client_dashboard_stats(client_id):
     try:
         cursor = conn.cursor()
         
-        # Ambil mesej live terkini
         cursor.execute("""
             SELECT sender, message, timestamp 
             FROM messages 
@@ -316,7 +335,6 @@ def get_client_dashboard_stats(client_id):
             time_str = latest_msg['timestamp'].strftime('%H:%M:%S') if latest_msg['timestamp'] else ''
             live_activity = f"Aktiviti Terkini [{time_str}]: Mesej daripada {latest_msg['sender']} - {latest_msg['message'][:30]}..."
 
-        # Hitung jumlah mesej keseluruhan vs balasan bot untuk metrik peratusan
         cursor.execute("SELECT COUNT(*) as total FROM messages WHERE client_id = %s;", (client_id,))
         total_res = cursor.fetchone()
         total_msgs = total_res['total'] if total_res else 1
@@ -359,7 +377,6 @@ def get_client_dashboard_stats(client_id):
             "manual_pct": "1.1%"
         }), 200
 
-# API Analisis Grafik Mesej & Lead Mingguan (Isn - Aha) dari PostgreSQL
 @app.route("/api/client/analytics-stats/<int:client_id>", methods=["GET"])
 def get_client_analytics_stats(client_id):
     conn = get_db_connection()
@@ -453,6 +470,7 @@ def verify_whatsapp_webhook():
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     data = request.json or {}
+    ACTIVE_CLIENT_ID = dapatkan_client_id_dari_token()  # ID ditarik secara dinamik dari database berdasarkan token pautan admin
 
     try:
         entry = data.get("entry", [])
@@ -490,7 +508,7 @@ def whatsapp_webhook():
         elif msg_type == "image":
             message_text = "[Gambar / Resit Dihantar]"
 
-        save_message_to_postgres(6, f"+{sender_phone}", message_text)
+        save_message_to_postgres(ACTIVE_CLIENT_ID, f"+{sender_phone}", message_text)
 
         message_lower = message_text.lower()
         waktu_sebenar = get_malaysia_time().strftime('%I:%M %p')
@@ -541,7 +559,7 @@ def whatsapp_webhook():
             
             teks_balasan_admin = f"✅ Nota berjaya disimpan untuk ingatan Zulfa:\n\n\"{nota_baru}\""
             hantar_teks_whatsapp(sender_phone, teks_balasan_admin)
-            save_message_to_postgres(6, "Zulfa (Bot)", teks_balasan_admin)
+            save_message_to_postgres(ACTIVE_CLIENT_ID, "Zulfa (Bot)", teks_balasan_admin)
             push_chat_to_sheets("sbltransport", sender_phone, "bot", teks_balasan_admin)
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
@@ -563,8 +581,8 @@ def whatsapp_webhook():
             else:
                 hantar_teks_whatsapp(sender_phone, caption_teks)
             
-            save_message_to_postgres(6, "Zulfa (Bot)", caption_teks)
-            tolak_token_klien(6)  # Menolak token kerana bot menghantar gambar QR
+            save_message_to_postgres(ACTIVE_CLIENT_ID, "Zulfa (Bot)", caption_teks)
+            tolak_token_klien(ACTIVE_CLIENT_ID)  # Menolak token klien secara dinamik
             push_chat_to_sheets("sbltransport", sender_phone, "bot", caption_teks)
             return jsonify({"status": "success", "action": "sent_qr_image"}), 200
 
@@ -584,8 +602,8 @@ def whatsapp_webhook():
 
             balasan_pelanggan = "Terima kasih! Resit/makluman bayaran anda telah diterima dan disemak oleh pihak pengurusan."
             hantar_teks_whatsapp(sender_phone, balasan_pelanggan)
-            save_message_to_postgres(6, "Zulfa (Bot)", balasan_pelanggan)
-            tolak_token_klien(6)  # Menolak token kerana bot membalas pengesahan resit
+            save_message_to_postgres(ACTIVE_CLIENT_ID, "Zulfa (Bot)", balasan_pelanggan)
+            tolak_token_klien(ACTIVE_CLIENT_ID)  # Menolak token klien secara dinamik
             push_chat_to_sheets("sbltransport", sender_phone, "bot", balasan_pelanggan)
             return jsonify({"status": "success", "action": "payment_notification_sent"}), 200
 
@@ -593,8 +611,8 @@ def whatsapp_webhook():
             jawapan_ai = zulfa_brain.proses_mesej(sender_phone, message_text)
             hantar_teks_whatsapp(sender_phone, jawapan_ai)
             
-            save_message_to_postgres(6, "Zulfa (Bot)", jawapan_ai)
-            tolak_token_klien(6)  # Menolak token setiap kali AI membalas mesej pelanggan
+            save_message_to_postgres(ACTIVE_CLIENT_ID, "Zulfa (Bot)", jawapan_ai)
+            tolak_token_klien(ACTIVE_CLIENT_ID)  # Menolak token setiap kali AI membalas mesej pelanggan
             
             waktu_balasan_ai = get_malaysia_time().strftime('%I:%M %p')
             if found_chat:
