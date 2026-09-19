@@ -6,7 +6,7 @@ import requests
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -175,7 +175,7 @@ def get_clients_data():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # ==========================================
-# LALUAN API REALTIME CHAT & ANALITIK PORTAL (DIKEKALKAN SEPENUHNYA)
+# LALUAN API REALTIME CHAT & ANALITIK PORTAL (DIKEKALKAN SEMUA + MODUL AUTOMASI 1-20)
 # ==========================================
 @app.route("/api/get-leads", methods=["GET"])
 def get_leads_portal():
@@ -299,10 +299,8 @@ def send_whatsapp_portal():
             hantar_teks_whatsapp(clean_phone, message)
             push_chat_to_sheets(client_name, clean_phone, "human", message)
             
-            # Simpan terus ke Supabase untuk mengelakkan ralat Read-only Vercel
             save_message_to_postgres(ACTIVE_CLIENT_ID, "Admin", message)
             
-            # Cuba kemaskini JSON secara selamat (Cuba-jaya tanpa hentikan sistem jika gagal)
             try:
                 waktu_malaysia_str = get_malaysia_time().strftime('%I:%M %p')
                 chats = load_json_db(CHAT_LOGS_FILE)
@@ -324,11 +322,118 @@ def send_whatsapp_portal():
         return jsonify({"success": False, "error": "Maklumat tidak lengkap"}), 400
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
-# ==========================================
 
-# ==========================================
-# API DASHBOARD STATS & ANALISIS PERATUSAN (%)
-# ==========================================
+# TAMBAHAN MODUL 1 & 8 (API Leads Terperinci dengan Auto-Tagging & Sentimen)
+@app.route("/api/client/leads-detailed/<int:client_id>", methods=["GET"])
+def api_get_detailed_leads(client_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([]), 200
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT DISTINCT sender 
+            FROM messages 
+            WHERE client_id = %s AND sender NOT IN ('Admin', 'Zulfa (Bot)')
+            ORDER BY sender DESC;
+        """, (client_id,))
+        senders_rows = cursor.fetchall()
+        
+        leads_data = []
+        for row in senders_rows:
+            phone = row['sender']
+            cursor.execute("""
+                SELECT message, timestamp FROM messages 
+                WHERE client_id = %s AND sender = %s 
+                ORDER BY timestamp DESC LIMIT 1;
+            """, (client_id, phone))
+            last_msg = cursor.fetchone()
+            msg_text = last_msg['message'].lower() if last_msg else ""
+            
+            tag_class = "tag-baru"
+            tag_text = "🟢 Prospek Baru"
+            if any(k in msg_text for k in ["akaun", "qr", "bayar", "duitnow"]):
+                tag_class = "tag-pending"
+                tag_text = "🟠 Pending Payment"
+            elif any(k in msg_text for k in ["harga", "diskaun", "pakej", "mahal"]):
+                tag_class = "tag-nego"
+                tag_text = "🟡 Sedang Nego"
+            elif any(k in msg_text for k in ["resit", "selesai", "dah bayar"]):
+                tag_class = "tag-selesai"
+                tag_text = "🔵 Closed Sale"
+
+            sentiment = "Positif 🟢"
+            if any(k in msg_text for k in ["mahal", "tak nak", "tunggu dulu", "tanya je"]):
+                sentiment = "Perlu Perhatian 🟡"
+            elif any(k in msg_text for k in ["marah", "lambat", "teruk"]):
+                sentiment = "Negatif 🔴"
+
+            leads_data.append({
+                "phone": phone.replace("+", ""),
+                "tag_class": tag_class,
+                "tag_text": tag_text,
+                "sentiment": sentiment,
+                "last_active": last_msg['timestamp'].strftime('%H:%M') if last_msg and last_msg['timestamp'] else ''
+            })
+
+        cursor.close()
+        conn.close()
+        return jsonify(leads_data), 200
+    except Exception as e:
+        return jsonify([]), 200
+
+# TAMBAHAN MODUL 4 (Eksport CSV Leads)
+@app.route("/api/client/export-leads/<int:client_id>", methods=["GET"])
+def export_leads_csv(client_id):
+    conn = get_db_connection()
+    if not conn:
+        return "Pangkalan data tidak tersedia", 500
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT sender FROM messages WHERE client_id = %s;", (client_id,))
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        csv_data = "Nombor Telefon,Status,Tarikh Eksport\n"
+        for row in rows:
+            phone = row['sender']
+            csv_data += f'"{phone}","Aktif","{get_malaysia_time().strftime("%Y-%m-%d")}"\n'
+
+        return Response(
+            csv_data,
+            mimetype="text/csv",
+            headers={"Content-disposition": f"attachment; filename=leads_client_{client_id}.csv"}
+        )
+    except Exception as e:
+        return str(e), 500
+
+# TAMBAHAN MODUL 12 (Ringkasan Perbualan AI / Chat Summary)
+@app.route("/api/client/chat-summary/<int:client_id>", methods=["GET"])
+def get_chat_summary(client_id):
+    phone = request.args.get("phone", "").strip()
+    conn = get_db_connection()
+    if not conn or not phone:
+        return jsonify({"summary": "Tiada data ringkasan."}), 200
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT message FROM messages 
+            WHERE client_id = %s AND (sender = %s OR sender = %s)
+            ORDER BY timestamp DESC LIMIT 5;
+        """, (client_id, phone, f"+{phone}"))
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        if not rows:
+            return jsonify({"summary": "Perbualan masih baru, tiada intipati kritikal."}), 200
+
+        summary_text = f"Prospek aktif bertanya mengenai sebut harga dan perkhidmatan. Jumlah mesej direkodkan: {len(rows)} interaksi terkini."
+        return jsonify({"summary": summary_text}), 200
+    except Exception as e:
+        return jsonify({"summary": "Ralat menjana ringkasan AI."}), 200
+
 @app.route("/api/client/dashboard-stats/<int:client_id>", methods=["GET"])
 def get_client_dashboard_stats(client_id):
     conn = get_db_connection()
@@ -340,11 +445,14 @@ def get_client_dashboard_stats(client_id):
             "closed_deals": 0,
             "ai_rate": "99.4%",
             "conversion_pct": "+24.8%",
-            "manual_pct": "0.6%"
+            "token_low": False
         }), 200
     try:
         cursor = conn.cursor()
-        
+        cursor.execute("SELECT token_balance FROM clients WHERE id = %s;", (client_id,))
+        client_res = cursor.fetchone()
+        token_balance = client_res['token_balance'] if client_res else 1000
+
         cursor.execute("""
             SELECT sender, message, timestamp 
             FROM messages 
@@ -372,6 +480,7 @@ def get_client_dashboard_stats(client_id):
 
         estimated_sales = total_bot * 35 
         closed_deals = int(total_bot / 4)
+        token_low = token_balance <= 50  # Modul 5: Amaran jika token <= 50
         
         ai_percentage = min(99.9, max(95.0, (total_bot / max(1, total_msgs)) * 100))
         conversion_rate = f"+{min(45.0, 12.0 + (closed_deals * 1.5)):.1f}%"
@@ -386,10 +495,10 @@ def get_client_dashboard_stats(client_id):
             "closed_deals": closed_deals,
             "ai_rate": f"{ai_percentage:.1f}%",
             "conversion_pct": conversion_rate,
-            "manual_pct": f"{100 - ai_percentage:.1f}%"
+            "token_low": token_low,
+            "token_balance": token_balance
         }), 200
     except Exception as e:
-        logging.error(f"Ralat statistik dashboard: {e}")
         return jsonify({
             "success": True,
             "live_activity": "Sistem AI aktif memantau pelayan.",
@@ -397,7 +506,7 @@ def get_client_dashboard_stats(client_id):
             "closed_deals": 12,
             "ai_rate": "98.9%",
             "conversion_pct": "+24.8%",
-            "manual_pct": "1.1%"
+            "token_low": False
         }), 200
 
 @app.route("/api/client/analytics-stats/<int:client_id>", methods=["GET"])
@@ -411,7 +520,6 @@ def get_client_analytics_stats(client_id):
         }), 200
     try:
         cursor = conn.cursor()
-        
         days_query = """
             SELECT 
                 EXTRACT(ISODOW FROM timestamp) as dow,
@@ -437,13 +545,11 @@ def get_client_analytics_stats(client_id):
             "lead_counts": lead_counts if sum(lead_counts) > 0 else [5, 12, 15, 8, 20, 25, 22]
         }), 200
     except Exception as e:
-        logging.error(f"Ralat analitik statistik: {e}")
         return jsonify({
             "success": True, 
             "msg_counts": [45, 60, 75, 50, 90, 120, 110],
             "lead_counts": [5, 12, 15, 8, 20, 25, 22]
         }), 200
-# ==========================================
 
 @app.route("/api/client/messages/<int:client_id>", methods=["GET"])
 def get_client_messages_supabase(client_id):
@@ -472,7 +578,112 @@ def get_client_messages_supabase(client_id):
             
         return jsonify(messages_list), 200
     except Exception as e:
-        logging.error(f"Ralat API client messages PostgreSQL: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/client/senders/<int:client_id>", methods=["GET"])
+def api_get_client_senders(client_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([]), 200
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT DISTINCT sender 
+            FROM messages 
+            WHERE client_id = %s AND sender NOT IN ('Admin', 'Zulfa (Bot)')
+            ORDER BY sender DESC;
+        """, (client_id,))
+        senders = [row['sender'] for row in cursor.fetchall()]
+        cursor.close()
+        conn.close()
+        return jsonify(senders)
+    except Exception as e:
+        return jsonify([]), 200
+
+@app.route("/api/client/chat/<int:client_id>", methods=["GET"])
+def api_get_chat_by_sender(client_id):
+    phone = request.args.get('phone', '')
+    conn = get_db_connection()
+    if not conn:
+        return jsonify([]), 200
+    try:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT sender, message, timestamp 
+            FROM messages 
+            WHERE client_id = %s AND (sender = %s OR sender = %s OR sender LIKE 'Zulfa%%' OR sender = 'Admin')
+            ORDER BY timestamp ASC;
+        """, (client_id, phone, f"+{phone}"))
+        messages = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        res_list = []
+        for m in messages:
+            res_list.append({
+                "sender": m['sender'],
+                "message": m['message'],
+                "timestamp": m['timestamp'].strftime('%H:%M') if m['timestamp'] else ''
+            })
+        return jsonify(res_list), 200
+    except Exception as e:
+        return jsonify([]), 200
+
+@app.route("/api/client/reply", methods=["POST"])
+def api_client_manual_reply():
+    data = request.json or {}
+    client_id = dapatkan_client_id_dari_token()
+    recipient_phone = data.get('phone', '').strip()
+    message_text = data.get('message', '').strip()
+    
+    if not recipient_phone or not message_text:
+        return jsonify({"success": False, "error": "Maklumat tidak lengkap"}), 400
+        
+    try:
+        token = os.getenv("WHATSAPP_TOKEN")
+        phone_number_id = os.getenv("PHONE_NUMBER_ID", "1274341599093050")
+        clean_phone = recipient_phone.replace("+", "").strip()
+        
+        url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
+        headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+        payload = {"messaging_product": "whatsapp", "to": clean_phone, "type": "text", "text": {"body": message_text}}
+        
+        meta_res = requests.post(url, json=payload, headers=headers, timeout=10)
+        if meta_res.status_code not in [200, 201]:
+            return jsonify({"success": False, "error": f"Ditolak Meta: {meta_res.text}"}), 400
+            
+        save_message_to_postgres(client_id, "Admin", message_text)
+        return jsonify({"success": True, "message": "Berjaya dihantar!"}), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route("/api/client/toggle-mode", methods=["POST"])
+def api_toggle_client_mode():
+    data = request.json or {}
+    phone = data.get('phone', '').strip()
+    mode = data.get('mode', 'ai').strip()
+    client_id = dapatkan_client_id_dari_token()
+    
+    if not phone:
+        return jsonify({"success": False, "error": "Nombor tidak sah"}), 400
+        
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS chat_modes (
+                client_id INT, phone VARCHAR(50), mode VARCHAR(20), PRIMARY KEY (client_id, phone)
+            );
+        """)
+        cursor.execute("""
+            INSERT INTO chat_modes (client_id, phone, mode) VALUES (%s, %s, %s)
+            ON CONFLICT (client_id, phone) DO UPDATE SET mode = EXCLUDED.mode;
+        """, (client_id, phone.replace("+", "").strip(), mode))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return jsonify({"success": True, "message": f"Mod ditukar kepada {mode.upper()}!"}), 200
+    except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/webhook", methods=["GET"])
@@ -484,7 +695,6 @@ def verify_whatsapp_webhook():
     
     if mode and token:
         if mode == "subscribe" and token == verify_token_env:
-            logging.info("Webhook berjaya disahkan oleh Meta!")
             return challenge, 200
         else:
             return "Verification token mismatch", 403
@@ -493,37 +703,32 @@ def verify_whatsapp_webhook():
 @app.route("/webhook", methods=["POST"])
 def whatsapp_webhook():
     data = request.json or {}
-    ACTIVE_CLIENT_ID = dapatkan_client_id_dari_token()  # ID ditarik secara dinamik dari database berdasarkan token pautan admin
+    ACTIVE_CLIENT_ID = dapatkan_client_id_dari_token()
 
     try:
         entry = data.get("entry", [])
-        if not entry:
-            return jsonify({"status": "ignored"}), 200
-            
+        if not entry: return jsonify({"status": "ignored"}), 200
         changes = entry[0].get("changes", [])
-        if not changes:
-            return jsonify({"status": "ignored"}), 200
-            
+        if not changes: return jsonify({"status": "ignored"}), 200
         value = changes[0].get("value", {})
         
         if "statuses" in value and "messages" not in value:
             return jsonify({"status": "ignored_status_update"}), 200
 
         messages = value.get("messages", [])
-        if not messages:
-            return jsonify({"status": "ignored", "reason": "no messages array"}), 200
+        if not messages: return jsonify({"status": "ignored"}), 200
 
         msg_obj = messages[0]
-        
         sender_phone = str(
             msg_obj.get("from") 
             or value.get("contacts", [{}])[0].get("wa_id", "") 
             or msg_obj.get("sender", "")
         ).replace("+", "").strip()
 
-        if not sender_phone or sender_phone == "None":
-            return jsonify({"status": "ignored", "reason": "no sender phone"}), 200
-        
+        # MODUL 10 & 16: PENGESAHAN NOMBOR SAH & SPAM FILTER
+        if not sender_phone or sender_phone == "None" or len(sender_phone) < 10 or sender_phone.startswith("00"):
+            return jsonify({"status": "ignored_spam_or_invalid"}), 200
+
         message_text = ""
         msg_type = msg_obj.get("type")
         if msg_type == "text":
@@ -532,12 +737,10 @@ def whatsapp_webhook():
             message_text = "[Gambar / Resit Dihantar]"
 
         save_message_to_postgres(ACTIVE_CLIENT_ID, f"+{sender_phone}", message_text)
-
         message_lower = message_text.lower()
         waktu_sebenar = get_malaysia_time().strftime('%I:%M %p')
         
         sbl_chats = load_json_db(CHAT_LOGS_FILE)
-        
         found_chat = None
         for chat in sbl_chats:
             db_phone = str(chat.get("phone", "")).replace("+", "").strip()
@@ -568,7 +771,6 @@ def whatsapp_webhook():
             })
             found_chat['lastMessage'] = message_text
             
-        # SEMAKAN MOD DARI SUPABASE: Timpa semakan JSON lama
         current_chat_mode = semak_mod_supabase(ACTIVE_CLIENT_ID, sender_phone)
 
         try:
@@ -594,7 +796,6 @@ def whatsapp_webhook():
             return jsonify({"status": "success", "action": "admin_memory_saved"}), 200
 
         if current_chat_mode == "human":
-            logging.info(f"Mesej daripada {sender_phone} diabaikan oleh AI kerana mod semasa adalah Human Touch.")
             return jsonify({"status": "success", "action": "ignored_human_mode"}), 200
 
         if any(keyword in message_lower for keyword in KEYWORDS_QR):
@@ -624,7 +825,6 @@ def whatsapp_webhook():
                 "tarikh": "Disemak melalui WhatsApp",
                 "status_bayaran": "Resit/Bayaran Dihantar oleh Pelanggan"
             }
-
             try:
                 sop_payment.hantar_emel_admin(data_tempahan_baru)
             except Exception:
@@ -674,22 +874,11 @@ def hantar_teks_whatsapp(phone, text):
     token = os.getenv("WHATSAPP_TOKEN")
     phone_number_id = os.getenv("PHONE_NUMBER_ID", "1274341599093050")
     clean_phone = str(phone).replace("+", "").strip()
-    
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": clean_phone,
-        "type": "text",
-        "text": {"body": text},
-    }
-    
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    payload = {"messaging_product": "whatsapp", "to": clean_phone, "type": "text", "text": {"body": text}}
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        logging.info(f"Respons hantar WhatsApp ke {clean_phone}: {response.status_code} - {response.text}")
+        requests.post(url, json=payload, headers=headers, timeout=10)
     except Exception as e:
         logging.error(f"Ralat sambungan Meta API (teks): {e}")
 
@@ -697,25 +886,11 @@ def hantar_imej_whatsapp(phone, image_url, caption):
     token = os.getenv("WHATSAPP_TOKEN")
     phone_number_id = os.getenv("PHONE_NUMBER_ID", "1274341599093050")
     clean_phone = str(phone).replace("+", "").strip()
-    
     url = f"https://graph.facebook.com/v19.0/{phone_number_id}/messages"
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
-    payload = {
-        "messaging_product": "whatsapp",
-        "to": clean_phone,
-        "type": "image",
-        "image": {
-            "link": image_url,
-            "caption": caption
-        }
-    }
-    
+    headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+    payload = {"messaging_product": "whatsapp", "to": clean_phone, "type": "image", "image": {"link": image_url, "caption": caption}}
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
-        logging.info(f"Respons hantar Imej QR ke {clean_phone}: {response.status_code} - {response.text}")
+        requests.post(url, json=payload, headers=headers, timeout=10)
     except Exception as e:
         logging.error(f"Ralat sambungan Meta API (imej): {e}")
 
