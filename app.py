@@ -60,6 +60,24 @@ def dapatkan_client_id_dari_token():
         logging.error(f"Ralat cari client_id dari token: {e}")
         return 6
 
+def semak_mod_supabase(client_id, phone):
+    """Mendapatkan status mod (ai/human) terus dari pangkalan data Supabase"""
+    conn = get_db_connection()
+    if not conn:
+        return "ai"
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT mode FROM chat_modes WHERE client_id = %s AND phone = %s;", (client_id, phone))
+        res = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if res:
+            return res['mode']
+        return "ai"
+    except Exception as e:
+        logging.error(f"Ralat semak mod dari Supabase: {e}")
+        return "ai"
+
 def save_message_to_postgres(client_id, sender_name, message_text):
     """Fungsi selamat merekodkan mesej WhatsApp terus ke jadual messages bersama timestamp"""
     conn = get_db_connection()
@@ -140,7 +158,7 @@ def index():
     return jsonify({
         "status": "online",
         "bot_name": "Zulfa - Shahril Basri Leisure Enterprise Bot",
-        "version": "2.20"
+        "version": "2.21"
     }), 200
 
 @app.route("/test-sheet", methods=["GET"])
@@ -549,9 +567,9 @@ def whatsapp_webhook():
                 "time": waktu_sebenar
             })
             found_chat['lastMessage'] = message_text
-            current_chat_mode = found_chat.get("mode", "ai")
-        else:
-            current_chat_mode = "ai"
+            
+        # SEMAKAN MOD DARI SUPABASE: Timpa semakan JSON lama
+        current_chat_mode = semak_mod_supabase(ACTIVE_CLIENT_ID, sender_phone)
 
         try:
             save_json_db(CHAT_LOGS_FILE, sbl_chats)
